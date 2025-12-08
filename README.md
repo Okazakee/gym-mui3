@@ -1,6 +1,6 @@
 # GymTracker
 
-A minimal workout viewer built with React and Material Design 3.
+A minimal workout viewer built with React and Material Design 3. Installable as a PWA.
 
 ## Features
 
@@ -11,14 +11,17 @@ A minimal workout viewer built with React and Material Design 3.
 - **Collapsible 4-week periodization** (optional)
 - **Material You** dynamic colors on Android 14+
 - **Dark/Light mode**
+- **PWA** - installable, works offline
 
-## Tech Stack
+## Install
 
-- React + TypeScript + Vite
-- MUI v6 (Material Design 3)
-- localStorage for persistence
+**Android (Chrome):**
+Menu (⋮) → "Add to Home Screen"
 
-## Run
+**iOS (Safari):**
+Share (↑) → "Add to Home Screen"
+
+## Dev
 
 ```bash
 npm install
