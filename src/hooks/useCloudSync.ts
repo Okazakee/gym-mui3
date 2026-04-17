@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   LAST_SYNC: 'gym-tracker-last-sync',
   SYNC_QUEUE: 'gym-tracker-sync-queue',
   SYNC_FAILED: 'gym-tracker-sync-failed',
+  LAST_PUSHED_HASH: 'gym-tracker-last-pushed-hash',
 };
 
 export interface BackupData {
@@ -40,8 +41,9 @@ export function useCloudSync() {
   const [syncFailed, setSyncFailed] = useState(false);
   
   const [syncQueue, setSyncQueue] = useLocalStorage<QueuedSync[]>(STORAGE_KEYS.SYNC_QUEUE, []);
+  const [lastPushedHash, setLastPushedHash] = useLocalStorage<string | null>(STORAGE_KEYS.LAST_PUSHED_HASH, null);
   const debounceTimerRef = useRef<number | null>(null);
-  const lastPushedHashRef = useRef<string | null>(null);
+  const lastPushedHashRef = useRef<string | null>(lastPushedHash);
   const lastCloudCheckRef = useRef<number>(0);
 
   const isConnected = !!githubToken;
@@ -207,13 +209,14 @@ export function useCloudSync() {
 
       if (success) {
         lastPushedHashRef.current = hash;
+        setLastPushedHash(hash);
         setLastSync(new Date().toISOString());
       } else {
         setSyncQueue(prev => [...prev, { timestamp: Date.now(), data, retries: 0 }]);
         setSyncFailed(true);
       }
     }, 2000);
-  }, [githubToken, gistId, createGist, updateGist, setGistId, setLastSync, setSyncQueue, setSyncFailed]);
+  }, [githubToken, gistId, createGist, updateGist, setGistId, setLastSync, setLastPushedHash, setSyncQueue, setSyncFailed]);
 
   const disconnect = useCallback(() => {
     setGithubToken(null);
@@ -222,7 +225,8 @@ export function useCloudSync() {
     setSyncQueue([]);
     setSyncFailed(false);
     lastPushedHashRef.current = null;
-  }, [setGithubToken, setGistId, setLastSync, setSyncQueue, setSyncFailed]);
+    setLastPushedHash(null);
+  }, [setGithubToken, setGistId, setLastSync, setSyncQueue, setSyncFailed, setLastPushedHash]);
 
   const triggerSyncNow = useCallback(async (data: BackupData) => {
     if (!githubToken || !gistId) return;
@@ -298,7 +302,8 @@ export function useCloudSync() {
 
   const invalidateSyncHash = useCallback(() => {
     lastPushedHashRef.current = null;
-  }, []);
+    setLastPushedHash(null);
+  }, [setLastPushedHash]);
 
   const confirmConnect = useCallback((token: string, resolvedGistId: string) => {
     setGithubToken(token);
