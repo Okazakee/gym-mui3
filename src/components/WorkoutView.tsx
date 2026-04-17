@@ -118,7 +118,10 @@ export function WorkoutView({
             />
             {weekData.loadModifier !== 1 && (
               <Chip
-                label={`+${Math.round((weekData.loadModifier - 1) * 100)}%`}
+                label={weekData.loadModifier < 1 
+                  ? `-${Math.round((1 - weekData.loadModifier) * 100)}%`
+                  : `+${Math.round((weekData.loadModifier - 1) * 100)}%`
+                }
                 size="small"
                 sx={{
                   fontSize: '0.7rem',
@@ -191,6 +194,7 @@ export function WorkoutView({
       {/* Add Exercise FAB */}
       <Fab
         color="primary"
+        size="medium"
         onClick={onAddExercise}
         sx={{
           position: 'fixed',

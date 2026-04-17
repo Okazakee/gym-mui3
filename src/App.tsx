@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { ThemeProvider, CssBaseline, Box, Container } from '@mui/material';
 
 import { lightTheme, darkTheme } from './theme';
 import { useWorkoutState } from './hooks/useWorkoutState';
+import { useCloudSync } from './hooks/useCloudSync';
 import type { WorkoutDay, Exercise } from './types';
 
 import { Header } from './components/Header';
@@ -11,6 +12,7 @@ import { WorkoutView } from './components/WorkoutView';
 import { Navigation } from './components/Navigation';
 import { AddExerciseDialog } from './components/AddExerciseDialog';
 import { RestTimer } from './components/RestTimer';
+import { SyncErrorModal } from './components/SyncErrorModal';
 
 function App() {
   const {
@@ -33,9 +35,52 @@ function App() {
     setRestDuration,
   } = useWorkoutState();
 
+  const { 
+    isConnected: cloudConnected, 
+    lastSync: cloudLastSync,
+    validateToken, 
+    sync: cloudSync,
+    disconnect: cloudDisconnect,
+    triggerSyncNow: cloudSyncNow,
+    setGithubToken: setCloudToken,
+    syncFailed,
+    clearSyncFailed,
+    hasPendingSync,
+  } = useCloudSync();
+
+  const handleCloudConnect = async (token: string) => {
+    const isValid = await validateToken(token);
+    if (isValid) {
+      setCloudToken(token);
+      return true;
+    }
+    return false;
+  };
+
   const [currentDay, setCurrentDay] = useState<WorkoutDay>('push');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
+
+  const backupData = useMemo(() => ({
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: {
+      workouts,
+      userWeights,
+      settings: {
+        currentWeek,
+        restDuration,
+        weekSelectorVisible,
+        darkMode,
+      },
+    },
+  }), [workouts, userWeights, currentWeek, restDuration, weekSelectorVisible, darkMode]);
+
+  useEffect(() => {
+    if (cloudConnected) {
+      cloudSync(backupData);
+    }
+  }, [backupData, cloudConnected, cloudSync]);
 
   const theme = useMemo(() => (darkMode ? darkTheme : lightTheme), [darkMode]);
 
@@ -73,6 +118,12 @@ function App() {
           currentWeek={currentWeek}
           restDuration={restDuration}
           weekSelectorVisible={weekSelectorVisible}
+          cloudConnected={cloudConnected}
+          cloudLastSync={cloudLastSync}
+          onCloudConnect={handleCloudConnect}
+          onCloudDisconnect={cloudDisconnect}
+          onCloudSyncNow={() => cloudSyncNow(backupData)}
+          hasPendingSync={hasPendingSync}
         />
 
         <Container
@@ -109,6 +160,11 @@ function App() {
           defaultDuration={restDuration}
           onDurationChange={setRestDuration}
           onOpenChange={setTimerOpen}
+        />
+
+        <SyncErrorModal
+          open={syncFailed}
+          onClose={clearSyncFailed}
         />
 
         <AddExerciseDialog

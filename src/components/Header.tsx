@@ -21,11 +21,14 @@ import {
   LightMode as LightModeIcon,
   DeleteOutline as ResetIcon,
   FitnessCenterRounded as LogoIcon,
-  Download as DownloadIcon,
-  Upload as UploadIcon,
+  CloudSync as CloudIcon,
+  SaveAlt as SaveAltIcon,
 } from '@mui/icons-material';
 import { useState, useRef } from 'react';
 import type { WorkoutSession, UserWeights, WeekPhase } from '../types';
+import { CloudSettingsModal } from './CloudSettingsModal';
+import { LocalBackupModal } from './LocalBackupModal';
+import { ImportPreviewModal } from './ImportPreviewModal';
 
 interface HeaderProps {
   darkMode: boolean;
@@ -37,6 +40,12 @@ interface HeaderProps {
   currentWeek: WeekPhase;
   restDuration: number;
   weekSelectorVisible: boolean;
+  cloudConnected: boolean;
+  cloudLastSync: string | null;
+  onCloudConnect: (token: string) => Promise<boolean>;
+  onCloudDisconnect: () => void;
+  onCloudSyncNow: () => void;
+  hasPendingSync?: boolean;
 }
 
 export function Header({ 
@@ -49,10 +58,20 @@ export function Header({
   currentWeek,
   restDuration,
   weekSelectorVisible,
+  cloudConnected,
+  cloudLastSync,
+  onCloudConnect,
+  onCloudDisconnect,
+  onCloudSyncNow,
+  hasPendingSync = false,
 }: HeaderProps) {
   const theme = useTheme();
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [cloudModalOpen, setCloudModalOpen] = useState(false);
+  const [localBackupModalOpen, setLocalBackupModalOpen] = useState(false);
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [pendingImport, setPendingImport] = useState<{ version: number; exportedAt: string; data: any } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleReset = () => {
@@ -60,32 +79,7 @@ export function Header({
     setResetDialogOpen(false);
   };
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const backup = JSON.parse(e.target?.result as string);
-        if (!backup.version || !backup.data) {
-          throw new Error('Invalid backup file');
-        }
-        onImportData(backup);
-        setImportError(null);
-      } catch (err) {
-        setImportError('Invalid backup file');
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  };
-
-  const handleExportBackup = () => {
+  const handleExportFromModal = () => {
     const backup = {
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -110,6 +104,62 @@ export function Header({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    setLocalBackupModalOpen(false);
+  };
+
+  const handleImportFromModal = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleLocalImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const backup = JSON.parse(e.target?.result as string);
+        if (!backup.version || !backup.data) {
+          throw new Error('Invalid backup file');
+        }
+        setPendingImport(backup);
+        setImportPreviewOpen(true);
+        setLocalBackupModalOpen(false);
+        setImportError(null);
+      } catch (err) {
+        setImportError('Invalid backup file');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
+  const handleConfirmImport = () => {
+    if (pendingImport) {
+      onImportData(pendingImport);
+    }
+    setImportPreviewOpen(false);
+    setPendingImport(null);
+  };
+
+  const handleCancelImport = () => {
+    setImportPreviewOpen(false);
+    setPendingImport(null);
+  };
+
+  const currentBackupData = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: {
+      workouts,
+      userWeights,
+      settings: {
+        currentWeek,
+        restDuration,
+        weekSelectorVisible,
+        darkMode,
+      },
+    },
   };
 
   return (
@@ -153,27 +203,33 @@ export function Header({
           </Box>
 
           <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Tooltip title="Export backup">
+            <Tooltip title={hasPendingSync ? "Syncing..." : "Cloud backup"}>
               <IconButton
-                onClick={handleExportBackup}
-                sx={{ color: theme.palette.text.primary }}
+                onClick={() => setCloudModalOpen(true)}
+                sx={{ 
+                  color: !cloudConnected 
+                    ? theme.palette.text.primary
+                    : hasPendingSync 
+                      ? theme.palette.warning.main
+                      : theme.palette.success.main
+                }}
               >
-                <DownloadIcon />
+                <CloudIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Import backup">
+            <Tooltip title="Local backup">
               <IconButton
-                onClick={handleImportClick}
+                onClick={() => setLocalBackupModalOpen(true)}
                 sx={{ color: theme.palette.text.primary }}
               >
-                <UploadIcon />
+                <SaveAltIcon />
               </IconButton>
             </Tooltip>
             <input
               ref={fileInputRef}
               type="file"
               accept=".json"
-              onChange={handleFileChange}
+              onChange={handleLocalImport}
               style={{ display: 'none' }}
             />
             <IconButton
@@ -232,6 +288,33 @@ export function Header({
           {importError}
         </Alert>
       </Snackbar>
+
+      <CloudSettingsModal
+        open={cloudModalOpen}
+        onClose={() => setCloudModalOpen(false)}
+        isConnected={cloudConnected}
+        lastSync={cloudLastSync}
+        onConnect={onCloudConnect}
+        onDisconnect={onCloudDisconnect}
+        onSyncNow={onCloudSyncNow}
+      />
+
+      <LocalBackupModal
+        open={localBackupModalOpen}
+        onClose={() => setLocalBackupModalOpen(false)}
+        onExport={handleExportFromModal}
+        onImport={handleImportFromModal}
+      />
+
+      {pendingImport && (
+        <ImportPreviewModal
+          open={importPreviewOpen}
+          onClose={handleCancelImport}
+          onConfirm={handleConfirmImport}
+          currentData={currentBackupData}
+          importedData={pendingImport}
+        />
+      )}
     </>
   );
 }
