@@ -188,20 +188,31 @@ export function useCloudSync() {
       }
 
       let currentGistId = gistId;
+      let success = false;
 
-      if (!currentGistId) {
-        currentGistId = await createGist(githubToken, data);
-        if (currentGistId) {
-          setGistId(currentGistId);
+      try {
+        if (!currentGistId) {
+          currentGistId = await createGist(githubToken, data);
+          if (currentGistId) {
+            setGistId(currentGistId);
+            success = true;
+          }
+        } else {
+          success = await updateGist(githubToken, currentGistId, data);
         }
-      } else {
-        await updateGist(githubToken, currentGistId, data);
+      } catch {
+        success = false;
       }
 
-      lastPushedHashRef.current = hash;
-      setLastSync(new Date().toISOString());
+      if (success) {
+        lastPushedHashRef.current = hash;
+        setLastSync(new Date().toISOString());
+      } else {
+        setSyncQueue(prev => [...prev, { timestamp: Date.now(), data, retries: 0 }]);
+        setSyncFailed(true);
+      }
     }, 2000);
-  }, [githubToken, gistId, createGist, updateGist, setGistId, setLastSync, setSyncQueue]);
+  }, [githubToken, gistId, createGist, updateGist, setGistId, setLastSync, setSyncQueue, setSyncFailed]);
 
   const disconnect = useCallback(() => {
     setGithubToken(null);
@@ -269,32 +280,35 @@ export function useCloudSync() {
     }
   }, [fetchCloudBackup]);
 
-  const connect = useCallback(async (token: string, localData: BackupData): Promise<{ conflict: boolean; cloudData?: BackupData }> => {
-    const valid = await validateToken(token);
-    if (!valid) {
-      return { conflict: false };
-    }
-
+  const confirmConnect = useCallback((token: string, resolvedGistId: string) => {
     setGithubToken(token);
+    setGistId(resolvedGistId);
+  }, [setGithubToken, setGistId]);
+
+  const connect = useCallback(async (
+    token: string,
+    localData: BackupData
+  ): Promise<{ conflict: false } | { conflict: true; cloudData: BackupData; pendingToken: string; pendingGistId: string }> => {
+    const valid = await validateToken(token);
+    if (!valid) return { conflict: false };
 
     if (!gistId) {
       const existing = await searchForExistingGist(token);
       if (existing) {
-        setGistId(existing.id);
-        return { conflict: true, cloudData: existing.data };
+        return { conflict: true, cloudData: existing.data, pendingToken: token, pendingGistId: existing.id };
       }
+      setGithubToken(token);
       const newGistId = await createGist(token, localData);
-      if (newGistId) {
-        setGistId(newGistId);
-      }
+      if (newGistId) setGistId(newGistId);
       return { conflict: false };
     }
 
     const cloudData = await fetchCloudBackup(token, gistId);
     if (cloudData && cloudData.version !== localData.version) {
-      return { conflict: true, cloudData };
+      return { conflict: true, cloudData, pendingToken: token, pendingGistId: gistId };
     }
 
+    setGithubToken(token);
     return { conflict: false };
   }, [gistId, validateToken, createGist, fetchCloudBackup, setGithubToken, setGistId, searchForExistingGist]);
 
@@ -313,5 +327,6 @@ export function useCloudSync() {
     clearSyncFailed,
     hasPendingSync: syncQueue.length > 0,
     connect,
+    confirmConnect,
   };
 }

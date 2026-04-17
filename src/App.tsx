@@ -24,6 +24,8 @@ function App() {
       weekConfigs?: WeekConfig[];
       dayConfigs?: DayConfig[];
     };
+    pendingToken: string;
+    pendingGistId: string;
   } | null>(null);
 
   const {
@@ -62,6 +64,7 @@ const {
     clearSyncFailed,
     hasPendingSync,
     connect,
+    confirmConnect,
   } = useCloudSync();
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -86,20 +89,24 @@ const {
 
   const handleCloudConnect = async (token: string): Promise<boolean> => {
     const result = await connect(token, backupData);
-    if (result.conflict && result.cloudData) {
-      setCloudImportData(result.cloudData);
+    if (result.conflict) {
+      setCloudImportData({ ...result.cloudData, pendingToken: result.pendingToken, pendingGistId: result.pendingGistId });
       return false;
     }
     return true;
   };
 
   const handleKeepLocal = () => {
-    setCloudImportData(null);
+    if (cloudImportData) {
+      confirmConnect(cloudImportData.pendingToken, cloudImportData.pendingGistId);
+      setCloudImportData(null);
+    }
   };
 
   const handleReplaceWithCloud = () => {
     if (cloudImportData) {
       importData(cloudImportData);
+      confirmConnect(cloudImportData.pendingToken, cloudImportData.pendingGistId);
       setCloudImportData(null);
     }
   };
