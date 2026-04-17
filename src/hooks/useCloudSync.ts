@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import type { WorkoutSession, UserWeights, WeekPhase } from '../types';
+import type { WorkoutSession, UserWeights, WeekPhase, WeekConfig, DayConfig } from '../types';
 
 const STORAGE_KEYS = {
   GITHUB_TOKEN: 'gym-tracker-github-token',
@@ -16,8 +16,8 @@ interface BackupData {
   data: {
     workouts: WorkoutSession[];
     userWeights: UserWeights;
-    weekConfigs?: unknown[];
-    dayConfigs?: unknown[];
+    weekConfigs?: WeekConfig[];
+    dayConfigs?: DayConfig[];
     settings: {
       currentWeek: WeekPhase;
       currentDay?: string;
@@ -243,6 +243,34 @@ export function useCloudSync() {
     };
   }, []);
 
+  const connect = useCallback(async (token: string, localVersion: number): Promise<{ conflict: boolean; cloudData?: BackupData }> => {
+    const valid = await validateToken(token);
+    if (!valid) {
+      return { conflict: false };
+    }
+
+    setGithubToken(token);
+
+    if (!gistId) {
+      const newGistId = await createGist(token, {
+        version: localVersion,
+        exportedAt: new Date().toISOString(),
+        data: { workouts: [], userWeights: {}, settings: { currentWeek: 1, restDuration: 150, darkMode: true } },
+      });
+      if (newGistId) {
+        setGistId(newGistId);
+      }
+      return { conflict: false };
+    }
+
+    const cloudData = await fetchCloudBackup(token, gistId);
+    if (cloudData && cloudData.version !== localVersion) {
+      return { conflict: true, cloudData };
+    }
+
+    return { conflict: false };
+  }, [gistId, validateToken, createGist, fetchCloudBackup, setGithubToken, setGistId]);
+
   return {
     isConnected,
     lastSync,
@@ -257,5 +285,6 @@ export function useCloudSync() {
     syncFailed,
     clearSyncFailed,
     hasPendingSync: syncQueue.length > 0,
+    connect,
   };
 }

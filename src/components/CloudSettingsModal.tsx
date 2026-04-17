@@ -58,7 +58,7 @@ export function CloudSettingsModal({
     if (success) {
       setToken('');
       onClose();
-    } else {
+    } else if (!showImportDialog) {
       setError('Invalid token. Please check and try again.');
     }
 

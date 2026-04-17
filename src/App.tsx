@@ -4,7 +4,7 @@ import { ThemeProvider, CssBaseline, Box, Container } from '@mui/material';
 import { lightTheme, darkTheme } from './theme';
 import { useWorkoutState } from './hooks/useWorkoutState';
 import { useCloudSync } from './hooks/useCloudSync';
-import type { WorkoutDay, Exercise } from './types';
+import type { WorkoutDay, Exercise, WorkoutSession, UserWeights, WeekPhase, WeekConfig, DayConfig } from './types';
 
 import { Header } from './components/Header';
 import { WorkoutView } from './components/WorkoutView';
@@ -14,6 +14,18 @@ import { RestTimer } from './components/RestTimer';
 import { SyncErrorModal } from './components/SyncErrorModal';
 
 function App() {
+  const [cloudImportData, setCloudImportData] = useState<{
+    version: number;
+    exportedAt: string;
+    data: {
+      workouts: WorkoutSession[];
+      userWeights: UserWeights;
+      settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; darkMode: boolean };
+      weekConfigs?: WeekConfig[];
+      dayConfigs?: DayConfig[];
+    };
+  } | null>(null);
+
   const {
     currentWeek,
     setCurrentWeek,
@@ -40,26 +52,36 @@ function App() {
     setDayConfigs,
   } = useWorkoutState();
 
-  const { 
-    isConnected: cloudConnected, 
+const {
+    isConnected: cloudConnected,
     lastSync: cloudLastSync,
-    validateToken, 
     sync: cloudSync,
     disconnect: cloudDisconnect,
     triggerSyncNow: cloudSyncNow,
-    setGithubToken: setCloudToken,
     syncFailed,
     clearSyncFailed,
     hasPendingSync,
+    connect,
   } = useCloudSync();
 
-  const handleCloudConnect = async (token: string) => {
-    const isValid = await validateToken(token);
-    if (isValid) {
-      setCloudToken(token);
-      return true;
+  const handleCloudConnect = async (token: string): Promise<boolean> => {
+    const result = await connect(token, 2);
+    if (result.conflict && result.cloudData) {
+      setCloudImportData(result.cloudData);
+      return false;
     }
-    return false;
+    return true;
+  };
+
+  const handleKeepLocal = () => {
+    setCloudImportData(null);
+  };
+
+  const handleReplaceWithCloud = () => {
+    if (cloudImportData) {
+      importData(cloudImportData);
+      setCloudImportData(null);
+    }
   };
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -132,6 +154,9 @@ function App() {
           onCloudDisconnect={cloudDisconnect}
           onCloudSyncNow={() => cloudSyncNow(backupData)}
           hasPendingSync={hasPendingSync}
+          cloudImportData={cloudImportData}
+          onKeepLocal={handleKeepLocal}
+          onReplaceWithCloud={handleReplaceWithCloud}
         />
 
         <Container

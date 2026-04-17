@@ -24,7 +24,7 @@ import {
   CloudSync as CloudIcon,
   SaveAlt as SaveAltIcon,
 } from '@mui/icons-material';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { WorkoutSession, UserWeights, WeekPhase, WeekConfig, DayConfig, WorkoutDay } from '../types';
 import { CloudSettingsModal } from './CloudSettingsModal';
 import { LocalBackupModal } from './LocalBackupModal';
@@ -48,6 +48,9 @@ interface HeaderProps {
   onCloudDisconnect: () => void;
   onCloudSyncNow: () => void;
   hasPendingSync?: boolean;
+  cloudImportData?: { version: number; exportedAt: string; data: { workouts: WorkoutSession[]; userWeights: UserWeights; settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; darkMode: boolean }; weekConfigs?: WeekConfig[]; dayConfigs?: DayConfig[] } } | null;
+  onKeepLocal?: () => void;
+  onReplaceWithCloud?: () => void;
 }
 
 export function Header({ 
@@ -68,15 +71,39 @@ export function Header({
   onCloudDisconnect,
   onCloudSyncNow,
   hasPendingSync = false,
+  cloudImportData,
+  onKeepLocal,
+  onReplaceWithCloud,
 }: HeaderProps) {
   const theme = useTheme();
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [cloudModalOpen, setCloudModalOpen] = useState(false);
+  const [cloudImportDialogOpen, setCloudImportDialogOpen] = useState(false);
   const [localBackupModalOpen, setLocalBackupModalOpen] = useState(false);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<{ version: number; exportedAt: string; data: { workouts: WorkoutSession[]; userWeights: UserWeights; settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; darkMode: boolean }; weekConfigs?: WeekConfig[]; dayConfigs?: DayConfig[] } } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const hasCloudImport = !!cloudImportData;
+
+  useEffect(() => {
+    if (hasCloudImport && cloudModalOpen) {
+      setCloudImportDialogOpen(true);
+    }
+  }, [hasCloudImport, cloudModalOpen]);
+
+  const handleKeepLocal = () => {
+    setCloudImportDialogOpen(false);
+    setCloudModalOpen(false);
+    onKeepLocal?.();
+  };
+
+  const handleReplaceWithCloud = () => {
+    setCloudImportDialogOpen(false);
+    setCloudModalOpen(false);
+    onReplaceWithCloud?.();
+  };
 
   const handleReset = () => {
     onResetData();
@@ -305,6 +332,9 @@ export function Header({
         onConnect={onCloudConnect}
         onDisconnect={onCloudDisconnect}
         onSyncNow={onCloudSyncNow}
+        showImportDialog={cloudImportDialogOpen && !!cloudImportData}
+        onReplaceWithCloud={handleReplaceWithCloud}
+        onKeepLocal={handleKeepLocal}
       />
 
       <LocalBackupModal
