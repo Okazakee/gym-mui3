@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -5,45 +6,63 @@ import {
   useTheme,
   Fab,
   Chip,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
-import type { WorkoutSession, WeekPhase, WorkoutDay } from '../types';
+import { Add as AddIcon, Settings as SettingsIcon } from '@mui/icons-material';
+import type { WorkoutSession, WeekPhase, WorkoutDay, WeekConfig, DayConfig, Exercise } from '../types';
 import { ExerciseCard } from './ExerciseCard';
-import { getWeekInfo } from '../data/workouts';
+import { ProgramSettingsModal } from './ProgramSettingsModal';
+import { AddExerciseDialog } from './AddExerciseDialog';
 
 interface WorkoutViewProps {
   workout: WorkoutSession;
   currentWeek: WeekPhase;
+  weekConfigs: WeekConfig[];
+  onWeekChange: (week: WeekPhase) => void;
+  onWeekConfigsChange: (configs: WeekConfig[]) => void;
+  dayConfigs: DayConfig[];
+  onDayConfigsChange: (configs: DayConfig[]) => void;
   userWeights: Record<string, number>;
   getAdjustedWeight: (exerciseId: string) => number;
   onWeightChange: (exerciseId: string, newWeight: number) => void;
   onDeleteExercise: (workoutId: string, exerciseId: string) => void;
+  onEditExercise: (workoutId: string, exercise: Exercise) => void;
   onAddExercise: () => void;
   onReorderExercises: (workoutId: WorkoutDay, fromIndex: number, toIndex: number) => void;
   timerOpen?: boolean;
+  weekName: string;
 }
 
 export function WorkoutView({
   workout,
   currentWeek,
+  weekConfigs,
+  onWeekChange,
+  onWeekConfigsChange,
+  dayConfigs,
+  onDayConfigsChange,
   userWeights,
   getAdjustedWeight,
   onWeightChange,
   onDeleteExercise,
+  onEditExercise,
   onAddExercise,
   onReorderExercises,
   timerOpen = false,
+  weekName,
 }: WorkoutViewProps) {
   const theme = useTheme();
-  const weekData = getWeekInfo(currentWeek);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [exerciseToEdit, setExerciseToEdit] = useState<Exercise | null>(null);
+  const weekData = weekConfigs.find(w => w.id === currentWeek) || weekConfigs[0] || { name: 'Week 1', loadModifier: 1, rir: 2 };
   
   const sortedExercises = [...workout.exercises].sort((a, b) => {
     const posA = a.position ?? 0;
     const posB = b.position ?? 0;
     return posA - posB;
   });
-
-  const uniqueMuscleGroups = [...new Set(sortedExercises.map(e => e.muscleGroup))];
 
   const handleMoveUp = (index: number) => {
     if (index > 0) {
@@ -57,8 +76,19 @@ export function WorkoutView({
     }
   };
 
+  const handleEditClick = (exercise: Exercise) => {
+    setExerciseToEdit(exercise);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSave = (exercise: Exercise) => {
+    onEditExercise(workout.id, exercise);
+    setEditDialogOpen(false);
+    setExerciseToEdit(null);
+  };
+
   return (
-    <Box sx={{ pb: timerOpen ? 50 : 16 }}>
+    <Box sx={{ pb: timerOpen ? 50 : 14 }}>
       {/* Workout Header */}
       <Box
         sx={{
@@ -94,76 +124,110 @@ export function WorkoutView({
           }}
         />
 
+        {/* Row 1: Title centered */}
         <Typography
           variant="h4"
           sx={{
             fontWeight: 700,
             color: theme.palette.primary.main,
-            mb: 1,
+            textAlign: 'center',
             position: 'relative',
           }}
         >
-          {workout.name}
-          <Box component="span" sx={{ ml: 1.5, display: 'inline-flex', gap: 0.5, verticalAlign: 'middle' }}>
-            <Chip
-              label={`RIR ${weekData.rir}`}
-              size="small"
-              sx={{
-                fontSize: '0.7rem',
-                height: 22,
-                fontWeight: 500,
-                backgroundColor: alpha(theme.palette.warning.main, 0.12),
-                color: theme.palette.warning.dark,
-              }}
-            />
-            {weekData.loadModifier !== 1 && (
+          {weekName} - {workout.name}
+        </Typography>
+
+        {/* Row 2: RIR and load */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', mt: 2, position: 'relative' }}>
+          <Chip
+            label={`RIR ${weekData.rir}`}
+            size="small"
+            sx={{
+              fontSize: '0.75rem',
+              height: 24,
+              fontWeight: 500,
+              backgroundColor: alpha(theme.palette.warning.main, 0.12),
+              color: theme.palette.warning.dark,
+            }}
+          />
+          <Chip
+            label={weekData.loadModifier === 1 ? 'Baseline' : weekData.loadModifier < 1 ? `-${Math.round((1 - weekData.loadModifier) * 100)}%` : `+${Math.round((weekData.loadModifier - 1) * 100)}%`}
+            size="small"
+            sx={{
+              fontSize: '0.75rem',
+              height: 24,
+              fontWeight: 600,
+              backgroundColor: alpha(theme.palette.success.main, 0.12),
+              color: theme.palette.success.main,
+            }}
+          />
+        </Box>
+
+        {/* Row 3: Week tabs and settings */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'center', mt: 2, position: 'relative' }}>
+          <Box sx={{ display: 'flex', gap: 0.75 }}>
+            {weekConfigs.map((week) => (
               <Chip
-                label={weekData.loadModifier < 1 
-                  ? `-${Math.round((1 - weekData.loadModifier) * 100)}%`
-                  : `+${Math.round((weekData.loadModifier - 1) * 100)}%`
-                }
-                size="small"
+                key={week.id}
+                label={`W${week.id}`}
+                onClick={() => onWeekChange(week.id)}
                 sx={{
-                  fontSize: '0.7rem',
-                  height: 22,
+                  px: 0.75,
                   fontWeight: 600,
-                  backgroundColor: alpha(theme.palette.success.main, 0.12),
-                  color: theme.palette.success.main,
+                  fontSize: '0.8rem',
+                  height: 28,
+                  minWidth: 36,
+                  transition: 'all 0.2s ease',
+                  backgroundColor:
+                    currentWeek === week.id
+                      ? theme.palette.primary.main
+                      : alpha(theme.palette.primary.main, 0.1),
+                  color:
+                    currentWeek === week.id
+                      ? theme.palette.primary.contrastText
+                      : theme.palette.primary.main,
+                  '&:hover': {
+                    backgroundColor:
+                      currentWeek === week.id
+                        ? theme.palette.primary.dark
+                        : alpha(theme.palette.primary.main, 0.2),
+                    transform: 'scale(1.05)',
+                  },
                 }}
               />
-            )}
+            ))}
           </Box>
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', position: 'relative', flexWrap: 'wrap', mt: 1.5 }}>
-          {uniqueMuscleGroups.slice(0, 3).map((muscle) => (
-            <Chip
-              key={muscle}
-              label={muscle}
+          <Tooltip title="Program Settings">
+            <IconButton
               size="small"
-              sx={{
-                fontSize: '0.75rem',
-                height: 24,
-                fontWeight: 500,
-                backgroundColor: alpha(theme.palette.primary.main, 0.12),
-                color: theme.palette.primary.main,
-              }}
-            />
-          ))}
-          {uniqueMuscleGroups.length > 3 && (
-            <Chip
-              label={`+${uniqueMuscleGroups.length - 3}`}
-              size="small"
-              sx={{
-                fontSize: '0.75rem',
-                height: 24,
-                fontWeight: 500,
-                backgroundColor: alpha(theme.palette.secondary.main, 0.12),
-                color: theme.palette.secondary.main,
-              }}
-            />
-          )}
+              onClick={() => setSettingsOpen(true)}
+              sx={{ color: theme.palette.text.secondary, ml: 0.5 }}
+            >
+              <SettingsIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
       </Box>
+
+      <ProgramSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        weekConfigs={weekConfigs}
+        onWeekConfigsChange={onWeekConfigsChange}
+        dayConfigs={dayConfigs}
+        onDayConfigsChange={onDayConfigsChange}
+      />
+
+      <AddExerciseDialog
+        open={editDialogOpen}
+        onClose={() => {
+          setEditDialogOpen(false);
+          setExerciseToEdit(null);
+        }}
+        onAdd={() => {}}
+        exerciseToEdit={exerciseToEdit}
+        onEdit={handleEditSave}
+      />
 
       {/* Exercise List */}
       <Box id="exercise-list-container">
@@ -182,6 +246,7 @@ export function WorkoutView({
               baseWeight={userWeights[exercise.id] ?? 0}
               onWeightChange={onWeightChange}
               onDelete={() => onDeleteExercise(workout.id, exercise.id)}
+              onEdit={handleEditClick}
               onMoveUp={() => handleMoveUp(index)}
               onMoveDown={() => handleMoveDown(index)}
               canMoveUp={index !== 0}

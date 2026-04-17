@@ -119,7 +119,7 @@ export function CloudSettingsModal({
               variant="text"
               size="small"
               endIcon={<LinkIcon fontSize="small" />}
-              onClick={() => window.open('https://github.com/settings/personal-access-tokens/new', '_blank')}
+              onClick={() => window.open('https://github.com/settings/tokens/new', '_blank')}
               sx={{ mb: 2 }}
             >
               Generate token on GitHub

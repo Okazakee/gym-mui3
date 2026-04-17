@@ -1,6 +1,19 @@
-export type WorkoutDay = 'push' | 'pull' | 'legs' | 'recall';
+export type WorkoutDay = string;
 
-export type WeekPhase = 1 | 2 | 3 | 4;
+export type WeekPhase = number;
+
+export interface WeekConfig {
+  id: number;
+  name: string;
+  loadModifier: number;
+  rir: number;
+}
+
+export interface DayConfig {
+  id: string;
+  name: string;
+  icon: string;
+}
 
 export interface Exercise {
   id: string;

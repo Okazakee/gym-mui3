@@ -16,7 +16,7 @@ interface BackupData {
   version: number;
   exportedAt: string;
   data: {
-    workouts: any[];
+    workouts: Array<{ id: string; name: string; exercises?: Array<{ id: string }> }>;
     userWeights: Record<string, number>;
     settings: {
       currentWeek: number;
@@ -57,8 +57,8 @@ function detectChanges(current: BackupData | null, imported: BackupData): Change
   const currentWorkouts = current.data.workouts;
   const importedWorkouts = imported.data.workouts;
 
-  const currentIds = new Set(currentWorkouts.map((w: any) => w.id));
-  const importedIds = new Set(importedWorkouts.map((w: any) => w.id));
+  const currentIds = new Set(currentWorkouts.map((w) => w.id));
+  const importedIds = new Set(importedWorkouts.map((w) => w.id));
 
   for (const workout of importedWorkouts) {
     if (!currentIds.has(workout.id)) {
@@ -73,10 +73,10 @@ function detectChanges(current: BackupData | null, imported: BackupData): Change
   }
 
   for (const workout of importedWorkouts) {
-    const currentWorkout = currentWorkouts.find((w: any) => w.id === workout.id);
+    const currentWorkout = currentWorkouts.find((w) => w.id === workout.id);
     if (currentWorkout) {
-      const currentExercises = new Set(currentWorkout.exercises?.map((e: any) => e.id) || []);
-      const importedExercises = new Set(workout.exercises?.map((e: any) => e.id) || []);
+      const currentExercises = new Set(currentWorkout.exercises?.map((e) => e.id) || []);
+      const importedExercises = new Set(workout.exercises?.map((e) => e.id) || []);
       
       let added = 0, removed = 0;
       for (const id of importedExercises) {

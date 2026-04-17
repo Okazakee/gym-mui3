@@ -25,7 +25,7 @@ import {
   SaveAlt as SaveAltIcon,
 } from '@mui/icons-material';
 import { useState, useRef } from 'react';
-import type { WorkoutSession, UserWeights, WeekPhase } from '../types';
+import type { WorkoutSession, UserWeights, WeekPhase, WeekConfig, DayConfig, WorkoutDay } from '../types';
 import { CloudSettingsModal } from './CloudSettingsModal';
 import { LocalBackupModal } from './LocalBackupModal';
 import { ImportPreviewModal } from './ImportPreviewModal';
@@ -34,10 +34,13 @@ interface HeaderProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onResetData: () => void;
-  onImportData: (backup: { version: number; data: { workouts: WorkoutSession[]; userWeights: UserWeights; settings: { currentWeek: WeekPhase; restDuration: number; weekSelectorVisible: boolean; darkMode: boolean } } }) => void;
+  onImportData: (backup: { version: number; data: { workouts: WorkoutSession[]; userWeights: UserWeights; weekConfigs?: WeekConfig[]; dayConfigs?: DayConfig[]; settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; weekSelectorVisible: boolean; darkMode: boolean } } }) => void;
   workouts: WorkoutSession[];
   userWeights: UserWeights;
   currentWeek: WeekPhase;
+  currentDay: WorkoutDay;
+  weekConfigs: WeekConfig[];
+  dayConfigs: DayConfig[];
   restDuration: number;
   weekSelectorVisible: boolean;
   cloudConnected: boolean;
@@ -56,6 +59,9 @@ export function Header({
   workouts,
   userWeights,
   currentWeek,
+  currentDay,
+  weekConfigs,
+  dayConfigs,
   restDuration,
   weekSelectorVisible,
   cloudConnected,
@@ -71,7 +77,7 @@ export function Header({
   const [cloudModalOpen, setCloudModalOpen] = useState(false);
   const [localBackupModalOpen, setLocalBackupModalOpen] = useState(false);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
-  const [pendingImport, setPendingImport] = useState<{ version: number; exportedAt: string; data: any } | null>(null);
+  const [pendingImport, setPendingImport] = useState<{ version: number; exportedAt: string; data: { workouts: WorkoutSession[]; userWeights: UserWeights; settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; weekSelectorVisible: boolean; darkMode: boolean }; weekConfigs?: WeekConfig[]; dayConfigs?: DayConfig[] } } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleReset = () => {
@@ -81,13 +87,16 @@ export function Header({
 
   const handleExportFromModal = () => {
     const backup = {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       data: {
         workouts,
         userWeights,
+        weekConfigs,
+        dayConfigs,
         settings: {
           currentWeek,
+          currentDay,
           restDuration,
           weekSelectorVisible,
           darkMode,
@@ -126,7 +135,7 @@ export function Header({
         setImportPreviewOpen(true);
         setLocalBackupModalOpen(false);
         setImportError(null);
-      } catch (err) {
+      } catch {
         setImportError('Invalid backup file');
       }
     };
@@ -148,13 +157,16 @@ export function Header({
   };
 
   const currentBackupData = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     data: {
       workouts,
       userWeights,
+      weekConfigs,
+      dayConfigs,
       settings: {
         currentWeek,
+        currentDay,
         restDuration,
         weekSelectorVisible,
         darkMode,

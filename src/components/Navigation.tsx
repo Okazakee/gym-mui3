@@ -4,22 +4,31 @@ import {
   SwapHoriz as PullIcon,
   DirectionsWalk as LegsIcon,
   Replay as RecallIcon,
+  Timer as TimerIcon,
+  Favorite as FavoriteIcon,
+  Star as StarIcon,
+  Settings as GearIcon,
 } from '@mui/icons-material';
-import type { WorkoutDay } from '../types';
+import type { WorkoutDay, DayConfig } from '../types';
 
 interface NavigationProps {
   currentDay: WorkoutDay;
   onDayChange: (day: WorkoutDay) => void;
+  dayConfigs: DayConfig[];
 }
 
-const navItems: { id: WorkoutDay; label: string; icon: React.ReactNode }[] = [
-  { id: 'push', label: 'Push', icon: <PushIcon /> },
-  { id: 'pull', label: 'Pull', icon: <PullIcon /> },
-  { id: 'legs', label: 'Legs', icon: <LegsIcon /> },
-  { id: 'recall', label: 'Recall', icon: <RecallIcon /> },
-];
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  FitnessCenter: PushIcon,
+  SwapHoriz: PullIcon,
+  DirectionsWalk: LegsIcon,
+  Replay: RecallIcon,
+  Timer: TimerIcon,
+  Favorite: FavoriteIcon,
+  Star: StarIcon,
+  Settings: GearIcon,
+};
 
-export function Navigation({ currentDay, onDayChange }: NavigationProps) {
+export function Navigation({ currentDay, onDayChange, dayConfigs }: NavigationProps) {
   const theme = useTheme();
 
   return (
@@ -40,63 +49,65 @@ export function Navigation({ currentDay, onDayChange }: NavigationProps) {
         onChange={(_, newValue) => onDayChange(newValue)}
         showLabels
         sx={{
-          height: 70,
+          height: 64,
           backgroundColor: 'transparent',
           '& .MuiBottomNavigationAction-root': {
             minWidth: 'auto',
-            padding: '8px 12px',
+            padding: '4px 6px',
             transition: 'all 0.2s ease',
             '&.Mui-selected': {
               '& .MuiSvgIcon-root': {
-                transform: 'scale(1.1)',
+                transform: 'scale(1.05)',
               },
             },
           },
           '& .MuiBottomNavigationAction-label': {
-            fontSize: '0.7rem',
-            marginTop: '4px',
+            fontSize: '0.65rem',
+            marginTop: '2px',
             fontWeight: 500,
             '&.Mui-selected': {
-              fontSize: '0.75rem',
+              fontSize: '0.7rem',
               fontWeight: 600,
             },
           },
         }}
       >
-        {navItems.map((item) => (
-          <BottomNavigationAction
-            key={item.id}
-            value={item.id}
-            label={item.label}
-            icon={
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 56,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor:
-                    currentDay === item.id
-                      ? alpha(theme.palette.primary.main, 0.15)
-                      : 'transparent',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {item.icon}
-              </div>
-            }
-            sx={{
-              color:
-                currentDay === item.id
-                  ? theme.palette.primary.main
-                  : theme.palette.text.secondary,
-            }}
-          />
-        ))}
+        {dayConfigs.map((day) => {
+          const IconComponent = ICON_MAP[day.icon] || PushIcon;
+          return (
+            <BottomNavigationAction
+              key={day.id}
+              value={day.id}
+              label={day.name}
+              icon={
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 40,
+                    height: 28,
+                    borderRadius: 14,
+                    backgroundColor:
+                      currentDay === day.id
+                        ? alpha(theme.palette.primary.main, 0.15)
+                        : 'transparent',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <IconComponent />
+                </div>
+              }
+              sx={{
+                color:
+                  currentDay === day.id
+                    ? theme.palette.primary.main
+                    : theme.palette.text.secondary,
+              }}
+            />
+          );
+        })}
       </BottomNavigation>
     </Paper>
   );
 }
-

@@ -7,7 +7,6 @@ import { useCloudSync } from './hooks/useCloudSync';
 import type { WorkoutDay, Exercise } from './types';
 
 import { Header } from './components/Header';
-import { WeekSelector } from './components/WeekSelector';
 import { WorkoutView } from './components/WorkoutView';
 import { Navigation } from './components/Navigation';
 import { AddExerciseDialog } from './components/AddExerciseDialog';
@@ -18,6 +17,8 @@ function App() {
   const {
     currentWeek,
     setCurrentWeek,
+    currentDay,
+    setCurrentDay,
     userWeights,
     updateWeight,
     getAdjustedWeight,
@@ -27,12 +28,16 @@ function App() {
     importData,
     workouts,
     addExercise,
+    editExercise,
     deleteExercise,
     reorderExercises,
     weekSelectorVisible,
-    setWeekSelectorVisible,
     restDuration,
     setRestDuration,
+    weekConfigs,
+    setWeekConfigs,
+    dayConfigs,
+    setDayConfigs,
   } = useWorkoutState();
 
   const { 
@@ -57,24 +62,26 @@ function App() {
     return false;
   };
 
-  const [currentDay, setCurrentDay] = useState<WorkoutDay>('push');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
 
   const backupData = useMemo(() => ({
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     data: {
       workouts,
       userWeights,
+      weekConfigs,
+      dayConfigs,
       settings: {
         currentWeek,
+        currentDay,
         restDuration,
         weekSelectorVisible,
         darkMode,
       },
     },
-  }), [workouts, userWeights, currentWeek, restDuration, weekSelectorVisible, darkMode]);
+  }), [workouts, userWeights, currentWeek, currentDay, restDuration, weekSelectorVisible, darkMode, weekConfigs, dayConfigs]);
 
   useEffect(() => {
     if (cloudConnected) {
@@ -85,7 +92,7 @@ function App() {
   const theme = useMemo(() => (darkMode ? darkTheme : lightTheme), [darkMode]);
 
   const currentWorkout = useMemo(
-    () => workouts.find((w) => w.id === currentDay)!,
+    () => workouts.find((w) => w.id === currentDay) || workouts[0] || { id: 'push', name: 'Push', description: '', exercises: [] },
     [workouts, currentDay]
   );
 
@@ -116,6 +123,9 @@ function App() {
           workouts={workouts}
           userWeights={userWeights}
           currentWeek={currentWeek}
+          currentDay={currentDay}
+          weekConfigs={weekConfigs}
+          dayConfigs={dayConfigs}
           restDuration={restDuration}
           weekSelectorVisible={weekSelectorVisible}
           cloudConnected={cloudConnected}
@@ -128,33 +138,38 @@ function App() {
 
         <Container
           maxWidth="sm"
+          disableGutters
           sx={{
             flex: 1,
-            px: 2,
-            py: 3,
           }}
         >
-          <WeekSelector
-            currentWeek={currentWeek}
-            onWeekChange={setCurrentWeek}
-            visible={weekSelectorVisible}
-            onToggleVisibility={() => setWeekSelectorVisible(!weekSelectorVisible)}
-          />
-
-          <WorkoutView
-            workout={currentWorkout}
-            currentWeek={currentWeek}
-            userWeights={userWeights}
-            getAdjustedWeight={getAdjustedWeight}
-            onWeightChange={updateWeight}
-            onDeleteExercise={handleDeleteExercise}
-            onAddExercise={() => setAddDialogOpen(true)}
-            onReorderExercises={reorderExercises}
-            timerOpen={timerOpen}
-          />
+          <Box sx={{ px: 2, py: 3 }}>
+            <WorkoutView
+              workout={currentWorkout}
+              currentWeek={currentWeek}
+              weekConfigs={weekConfigs}
+              onWeekChange={setCurrentWeek}
+              onWeekConfigsChange={setWeekConfigs}
+              dayConfigs={dayConfigs}
+              onDayConfigsChange={setDayConfigs}
+              userWeights={userWeights}
+              getAdjustedWeight={getAdjustedWeight}
+              onWeightChange={updateWeight}
+              onDeleteExercise={handleDeleteExercise}
+              onEditExercise={editExercise}
+              onAddExercise={() => setAddDialogOpen(true)}
+              onReorderExercises={reorderExercises}
+              timerOpen={timerOpen}
+              weekName={weekConfigs.find(w => w.id === currentWeek)?.name || 'Week 1'}
+            />
+          </Box>
         </Container>
 
-        <Navigation currentDay={currentDay} onDayChange={setCurrentDay} />
+        <Navigation 
+            currentDay={currentDay} 
+            onDayChange={setCurrentDay}
+            dayConfigs={dayConfigs}
+          />
 
         <RestTimer
           defaultDuration={restDuration}

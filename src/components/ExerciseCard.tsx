@@ -33,6 +33,7 @@ interface ExerciseCardProps {
   baseWeight: number;
   onWeightChange: (exerciseId: string, newWeight: number) => void;
   onDelete: () => void;
+  onEdit: (exercise: Exercise) => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   canMoveUp?: boolean;
@@ -45,6 +46,7 @@ export function ExerciseCard({
   baseWeight,
   onWeightChange,
   onDelete,
+  onEdit,
   onMoveUp,
   onMoveDown,
   canMoveUp = true,
@@ -130,7 +132,26 @@ export function ExerciseCard({
               ))}
             </Box>
           </Box>
+          <IconButton
+            size="small"
+            onClick={() => onEdit(exercise)}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                color: theme.palette.primary.main,
+              },
+            }}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
         </Box>
+
+        {exercise.notes && (
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1.5 }}>
+            💡 {exercise.notes}
+          </Typography>
+        )}
 
         {/* Weight Control */}
         <Box
@@ -230,12 +251,6 @@ export function ExerciseCard({
             <AddIcon />
           </IconButton>
         </Box>
-
-        {exercise.notes && (
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, my: 1 }}>
-            💡 {exercise.notes}
-          </Typography>
-        )}
 
         {/* Bottom Actions */}
         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 2 }}>

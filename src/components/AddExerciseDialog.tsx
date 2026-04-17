@@ -15,6 +15,8 @@ interface AddExerciseDialogProps {
   open: boolean;
   onClose: () => void;
   onAdd: (exercise: Exercise, position: number) => void;
+  exerciseToEdit?: Exercise | null;
+  onEdit?: (exercise: Exercise) => void;
 }
 
 const muscleGroups = [
@@ -31,15 +33,47 @@ const muscleGroups = [
   'Full Body',
 ];
 
-export function AddExerciseDialog({ open, onClose, onAdd }: AddExerciseDialogProps) {
-  const [name, setName] = useState('');
-  const [muscleGroup, setMuscleGroup] = useState('Chest');
-  const [sets, setSets] = useState('2');
-  const [reps, setReps] = useState('10');
-  const [notes, setNotes] = useState('');
+export function AddExerciseDialog({ open, onClose, onAdd, exerciseToEdit, onEdit }: AddExerciseDialogProps) {
+  const isEditing = !!exerciseToEdit;
+
+  const initialValues = isEditing && exerciseToEdit
+    ? {
+        name: exerciseToEdit.name,
+        muscleGroup: exerciseToEdit.muscleGroup,
+        sets: exerciseToEdit.sets.toString(),
+        reps: exerciseToEdit.reps,
+        notes: exerciseToEdit.notes || '',
+      }
+    : {
+        name: '',
+        muscleGroup: 'Chest',
+        sets: '2',
+        reps: '10',
+        notes: '',
+      };
+
+  const [name, setName] = useState(initialValues.name);
+  const [muscleGroup, setMuscleGroup] = useState(initialValues.muscleGroup);
+  const [sets, setSets] = useState(initialValues.sets);
+  const [reps, setReps] = useState(initialValues.reps);
+  const [notes, setNotes] = useState(initialValues.notes);
 
   const handleSubmit = () => {
     if (!name.trim()) return;
+
+    if (isEditing && exerciseToEdit && onEdit) {
+      const editedExercise: Exercise = {
+        ...exerciseToEdit,
+        name: name.trim(),
+        muscleGroup,
+        sets: parseInt(sets) || 2,
+        reps: reps || '10',
+        notes: notes.trim() || undefined,
+      };
+      onEdit(editedExercise);
+      onClose();
+      return;
+    }
 
     const newExercise: Exercise = {
       id: `custom-${Date.now()}`,
@@ -51,15 +85,7 @@ export function AddExerciseDialog({ open, onClose, onAdd }: AddExerciseDialogPro
       notes: notes.trim() || undefined,
     };
 
-    // Position will be set by the parent (at the end of the list)
     onAdd(newExercise, -1);
-    
-    // Reset form
-    setName('');
-    setMuscleGroup('Chest');
-    setSets('2');
-    setReps('10');
-    setNotes('');
     onClose();
   };
 
@@ -73,7 +99,7 @@ export function AddExerciseDialog({ open, onClose, onAdd }: AddExerciseDialogPro
         sx: { borderRadius: 4 }
       }}
     >
-      <DialogTitle sx={{ fontWeight: 600 }}>Add Exercise</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 600 }}>{isEditing ? 'Edit Exercise' : 'Add Exercise'}</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <TextField
@@ -134,10 +160,9 @@ export function AddExerciseDialog({ open, onClose, onAdd }: AddExerciseDialogPro
           variant="contained"
           disabled={!name.trim()}
         >
-          Add Exercise
+          {isEditing ? 'Save Changes' : 'Add Exercise'}
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
-
