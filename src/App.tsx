@@ -64,26 +64,6 @@ const {
     connect,
   } = useCloudSync();
 
-  const handleCloudConnect = async (token: string): Promise<boolean> => {
-    const result = await connect(token, 2);
-    if (result.conflict && result.cloudData) {
-      setCloudImportData(result.cloudData);
-      return false;
-    }
-    return true;
-  };
-
-  const handleKeepLocal = () => {
-    setCloudImportData(null);
-  };
-
-  const handleReplaceWithCloud = () => {
-    if (cloudImportData) {
-      importData(cloudImportData);
-      setCloudImportData(null);
-    }
-  };
-
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
 
@@ -103,6 +83,26 @@ const {
       },
     },
   }), [workouts, userWeights, currentWeek, currentDay, restDuration, darkMode, weekConfigs, dayConfigs]);
+
+  const handleCloudConnect = async (token: string): Promise<boolean> => {
+    const result = await connect(token, backupData);
+    if (result.conflict && result.cloudData) {
+      setCloudImportData(result.cloudData);
+      return false;
+    }
+    return true;
+  };
+
+  const handleKeepLocal = () => {
+    setCloudImportData(null);
+  };
+
+  const handleReplaceWithCloud = () => {
+    if (cloudImportData) {
+      importData(cloudImportData);
+      setCloudImportData(null);
+    }
+  };
 
   useEffect(() => {
     if (cloudConnected) {

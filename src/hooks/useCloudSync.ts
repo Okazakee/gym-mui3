@@ -41,6 +41,7 @@ export function useCloudSync() {
   
   const [syncQueue, setSyncQueue] = useLocalStorage<QueuedSync[]>(STORAGE_KEYS.SYNC_QUEUE, []);
   const debounceTimerRef = useRef<number | null>(null);
+  const lastPushedHashRef = useRef<string | null>(null);
 
   const isConnected = !!githubToken;
 
@@ -136,12 +137,16 @@ export function useCloudSync() {
 
   const processSyncQueue = useCallback(async (token: string, existingGistId: string | null) => {
     if (!navigator.onLine) return;
-    
+
     let currentGistId = existingGistId;
-    
+    const failedItems: QueuedSync[] = [];
+
     for (const item of syncQueue) {
-      if (!navigator.onLine) break;
-      
+      if (!navigator.onLine) {
+        failedItems.push(item);
+        continue;
+      }
+
       try {
         if (!currentGistId) {
           currentGistId = await createGist(token, item.data);
@@ -151,30 +156,26 @@ export function useCloudSync() {
         } else {
           await updateGist(token, currentGistId, item.data);
         }
-        
+
         setLastSync(new Date().toISOString());
       } catch {
-        const newQueue = [...syncQueue];
-        const idx = newQueue.findIndex(q => q.timestamp === item.timestamp);
-        if (idx !== -1) {
-          newQueue[idx] = { ...item, retries: item.retries + 1 };
-          if (newQueue[idx].retries >= 3) {
-            newQueue.splice(idx, 1);
-            setSyncFailed(true);
-          } else {
-            setSyncQueue(newQueue);
-          }
+        const updated = { ...item, retries: item.retries + 1 };
+        if (updated.retries >= 3) {
+          setSyncFailed(true);
+        } else {
+          failedItems.push(updated);
         }
       }
     }
-    
-    if (syncQueue.length > 0 && navigator.onLine) {
-      setSyncQueue([]);
-    }
+
+    setSyncQueue(failedItems);
   }, [syncQueue, createGist, updateGist, setGistId, setLastSync, setSyncFailed, setSyncQueue]);
 
   const sync = useCallback(async (data: BackupData) => {
     if (!githubToken) return;
+
+    const hash = JSON.stringify(data.data);
+    if (hash === lastPushedHashRef.current) return;
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -197,6 +198,7 @@ export function useCloudSync() {
         await updateGist(githubToken, currentGistId, data);
       }
 
+      lastPushedHashRef.current = hash;
       setLastSync(new Date().toISOString());
     }, 2000);
   }, [githubToken, gistId, createGist, updateGist, setGistId, setLastSync, setSyncQueue]);
@@ -205,7 +207,10 @@ export function useCloudSync() {
     setGithubToken(null);
     setGistId(null);
     setLastSync(null);
-  }, [setGithubToken, setGistId, setLastSync]);
+    setSyncQueue([]);
+    setSyncFailed(false);
+    lastPushedHashRef.current = null;
+  }, [setGithubToken, setGistId, setLastSync, setSyncQueue, setSyncFailed]);
 
   const triggerSyncNow = useCallback(async (data: BackupData) => {
     if (!githubToken || !gistId) return;
@@ -243,7 +248,28 @@ export function useCloudSync() {
     };
   }, []);
 
-  const connect = useCallback(async (token: string, localVersion: number): Promise<{ conflict: boolean; cloudData?: BackupData }> => {
+  const searchForExistingGist = useCallback(async (token: string): Promise<{ id: string; data: BackupData } | null> => {
+    try {
+      const response = await fetch('https://api.github.com/gists', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+      if (!response.ok) return null;
+      const gists: Array<{ id: string; description: string; files: Record<string, unknown> }> = await response.json();
+      const found = gists.find(g => g.description === 'GymTracker Backup' && g.files['gymtracker-backup.json']);
+      if (!found) return null;
+      const data = await fetchCloudBackup(token, found.id);
+      if (!data) return null;
+      return { id: found.id, data };
+    } catch {
+      return null;
+    }
+  }, [fetchCloudBackup]);
+
+  const connect = useCallback(async (token: string, localData: BackupData): Promise<{ conflict: boolean; cloudData?: BackupData }> => {
     const valid = await validateToken(token);
     if (!valid) {
       return { conflict: false };
@@ -252,11 +278,12 @@ export function useCloudSync() {
     setGithubToken(token);
 
     if (!gistId) {
-      const newGistId = await createGist(token, {
-        version: localVersion,
-        exportedAt: new Date().toISOString(),
-        data: { workouts: [], userWeights: {}, settings: { currentWeek: 1, restDuration: 150, darkMode: true } },
-      });
+      const existing = await searchForExistingGist(token);
+      if (existing) {
+        setGistId(existing.id);
+        return { conflict: true, cloudData: existing.data };
+      }
+      const newGistId = await createGist(token, localData);
       if (newGistId) {
         setGistId(newGistId);
       }
@@ -264,12 +291,12 @@ export function useCloudSync() {
     }
 
     const cloudData = await fetchCloudBackup(token, gistId);
-    if (cloudData && cloudData.version !== localVersion) {
+    if (cloudData && cloudData.version !== localData.version) {
       return { conflict: true, cloudData };
     }
 
     return { conflict: false };
-  }, [gistId, validateToken, createGist, fetchCloudBackup, setGithubToken, setGistId]);
+  }, [gistId, validateToken, createGist, fetchCloudBackup, setGithubToken, setGistId, searchForExistingGist]);
 
   return {
     isConnected,

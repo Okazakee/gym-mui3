@@ -245,7 +245,12 @@ export function useWorkoutState() {
     setCurrentWeek(1);
     setUserWeights({});
     setCustomWorkouts(defaultWorkouts);
-  }, [setCurrentWeek, setUserWeights, setCustomWorkouts]);
+    setRestDuration(DEFAULT_REST_DURATION);
+    setDarkMode(true);
+    setWeekConfigs(defaultWeekConfigs);
+    setDayConfigs(defaultDayConfigs);
+    setCurrentDay('push');
+  }, [setCurrentWeek, setUserWeights, setCustomWorkouts, setRestDuration, setDarkMode, setWeekConfigs, setDayConfigs, setCurrentDay]);
 
   // Import backup data
   const importData = useCallback(
