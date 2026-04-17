@@ -9,6 +9,7 @@ import {
   Collapse,
   Slider,
   Paper,
+  Tooltip,
 } from '@mui/material';
 import {
   Timer as TimerIcon,
@@ -18,7 +19,10 @@ import {
   Close as CloseIcon,
   Add as AddIcon,
   Remove as RemoveIcon,
+  Lock as LockIcon,
+  LockOpen as LockOpenIcon,
 } from '@mui/icons-material';
+import { useWakeLock } from '../hooks/useWakeLock';
 
 interface RestTimerProps {
   defaultDuration: number; // in seconds
@@ -34,6 +38,7 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
   const [showSettings, setShowSettings] = useState(false);
   const intervalRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { isSupported: wakeLockSupported, isActive: wakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock();
 
   // Initialize audio for timer end
   useEffect(() => {
@@ -78,8 +83,16 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
     if (timeLeft === 0) {
       setTimeLeft(duration);
     }
-    setIsRunning((prev) => !prev);
-  }, [timeLeft, duration]);
+    setIsRunning((prev) => {
+      const newIsRunning = !prev;
+      if (newIsRunning) {
+        requestWakeLock();
+      } else {
+        releaseWakeLock();
+      }
+      return newIsRunning;
+    });
+  }, [timeLeft, duration, requestWakeLock, releaseWakeLock]);
 
   const resetTimer = useCallback(() => {
     setIsRunning(false);
@@ -257,20 +270,42 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
             >
               {isRunning ? <PauseIcon sx={{ fontSize: 32 }} /> : <PlayIcon sx={{ fontSize: 32 }} />}
             </IconButton>
+            <Tooltip title={wakeLockActive ? 'Screen will stay on' : 'Allow screen to sleep'}>
+              <IconButton
+                onClick={() => wakeLockActive ? releaseWakeLock() : requestWakeLock()}
+                disabled={!wakeLockSupported}
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '50%',
+                  backgroundColor: wakeLockActive 
+                    ? alpha(theme.palette.success.main, 0.2)
+                    : alpha(theme.palette.text.primary, 0.1),
+                  color: wakeLockActive ? theme.palette.success.main : theme.palette.text.primary,
+                  '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.3) },
+                }}
+              >
+                {wakeLockActive ? <LockIcon /> : <LockOpenIcon />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          {/* Secondary Controls */}
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             <IconButton
               onClick={() => setShowSettings(!showSettings)}
               sx={{
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 borderRadius: '50%',
                 backgroundColor: showSettings 
                   ? alpha(theme.palette.primary.main, 0.2)
-                  : alpha(theme.palette.text.primary, 0.1),
+                  : alpha(theme.palette.text.primary, 0.05),
                 color: showSettings ? theme.palette.primary.main : theme.palette.text.primary,
                 '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.2) },
               }}
             >
-              <TimerIcon />
+              <TimerIcon fontSize="small" />
             </IconButton>
           </Box>
 

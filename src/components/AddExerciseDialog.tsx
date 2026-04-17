@@ -14,7 +14,7 @@ import type { Exercise } from '../types';
 interface AddExerciseDialogProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (exercise: Exercise) => void;
+  onAdd: (exercise: Exercise, position: number) => void;
 }
 
 const muscleGroups = [
@@ -51,7 +51,8 @@ export function AddExerciseDialog({ open, onClose, onAdd }: AddExerciseDialogPro
       notes: notes.trim() || undefined,
     };
 
-    onAdd(newExercise);
+    // Position will be set by the parent (at the end of the list)
+    onAdd(newExercise, -1);
     
     // Reset form
     setName('');

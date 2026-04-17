@@ -12,28 +12,72 @@ import {
   Button,
   useTheme,
   alpha,
+  Tooltip,
 } from '@mui/material';
 import {
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
   DeleteOutline as ResetIcon,
   FitnessCenterRounded as LogoIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
+import type { WorkoutSession, UserWeights } from '../types';
 
 interface HeaderProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onResetData: () => void;
+  workouts: WorkoutSession[];
+  userWeights: UserWeights;
+  currentWeek: number;
+  restDuration: number;
+  weekSelectorVisible: boolean;
 }
 
-export function Header({ darkMode, onToggleDarkMode, onResetData }: HeaderProps) {
+export function Header({ 
+  darkMode, 
+  onToggleDarkMode, 
+  onResetData,
+  workouts,
+  userWeights,
+  currentWeek,
+  restDuration,
+  weekSelectorVisible,
+}: HeaderProps) {
   const theme = useTheme();
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const handleReset = () => {
     onResetData();
     setResetDialogOpen(false);
+  };
+
+  const handleExportBackup = () => {
+    const backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: {
+        workouts,
+        userWeights,
+        settings: {
+          currentWeek,
+          restDuration,
+          weekSelectorVisible,
+          darkMode,
+        },
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `gymtracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -77,6 +121,14 @@ export function Header({ darkMode, onToggleDarkMode, onResetData }: HeaderProps)
           </Box>
 
           <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Tooltip title="Export backup">
+              <IconButton
+                onClick={handleExportBackup}
+                sx={{ color: theme.palette.text.primary }}
+              >
+                <DownloadIcon />
+              </IconButton>
+            </Tooltip>
             <IconButton
               onClick={onToggleDarkMode}
               sx={{ color: theme.palette.text.primary }}

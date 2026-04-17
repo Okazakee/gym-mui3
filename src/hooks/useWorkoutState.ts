@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import type { WeekPhase, UserWeights, WorkoutDay, Exercise, WorkoutSession } from '../types';
 import { workouts as defaultWorkouts, getWeekInfo } from '../data/workouts';
@@ -10,9 +10,40 @@ const STORAGE_KEYS = {
   CUSTOM_WORKOUTS: 'gym-tracker-workouts',
   WEEK_VISIBLE: 'gym-tracker-week-visible',
   REST_DURATION: 'gym-tracker-rest-duration',
+  VERSION: 'gym-tracker-version', // For migration tracking
 };
 
+const CURRENT_VERSION = 1;
 const DEFAULT_REST_DURATION = 150; // 2:30 in seconds
+
+// Migration function to add position to existing exercises
+function migrateWorkouts(workouts: WorkoutSession[]): WorkoutSession[] {
+  return workouts.map((workout) => {
+    // If exercises already have positions, return as-is
+    const hasPositions = workout.exercises.every((e) => e.position !== undefined);
+    if (hasPositions) {
+      return workout;
+    }
+
+    // Otherwise, add positions based on array index
+    return {
+      ...workout,
+      exercises: workout.exercises.map((exercise, index) => ({
+        ...exercise,
+        position: index,
+      })),
+    };
+  });
+}
+
+// Sort exercises by position
+function sortExercisesByPosition(exercises: Exercise[]): Exercise[] {
+  return [...exercises].sort((a, b) => {
+    const posA = a.position ?? 0;
+    const posB = b.position ?? 0;
+    return posA - posB;
+  });
+}
 
 export function useWorkoutState() {
   const [currentWeek, setCurrentWeek] = useLocalStorage<WeekPhase>(STORAGE_KEYS.WEEK, 1);
@@ -30,6 +61,18 @@ export function useWorkoutState() {
     STORAGE_KEYS.REST_DURATION,
     DEFAULT_REST_DURATION
   );
+  const [storedVersion, setStoredVersion] = useLocalStorage<number | null>(
+    STORAGE_KEYS.VERSION,
+    null
+  );
+
+  // Run migrations on mount
+  useEffect(() => {
+    if (storedVersion === null || storedVersion < CURRENT_VERSION) {
+      setCustomWorkouts((prev) => migrateWorkouts(prev));
+      setStoredVersion(CURRENT_VERSION);
+    }
+  }, [storedVersion, setCustomWorkouts, setStoredVersion]);
 
   // Calculate adjusted weight for current week
   const getAdjustedWeight = useCallback(
@@ -54,13 +97,36 @@ export function useWorkoutState() {
 
   // Add exercise to a workout
   const addExercise = useCallback(
-    (workoutId: WorkoutDay, exercise: Exercise) => {
+    (workoutId: WorkoutDay, exercise: Exercise, position: number = -1) => {
       setCustomWorkouts((prev) => 
-        prev.map((workout) => 
-          workout.id === workoutId
-            ? { ...workout, exercises: [...workout.exercises, exercise] }
-            : workout
-        )
+        prev.map((workout) => {
+          if (workout.id !== workoutId) return workout;
+          
+          // Sort existing exercises by position
+          const sortedExercises = sortExercisesByPosition(workout.exercises);
+          
+          // Determine position for new exercise
+          let newPosition: number;
+          if (position === -1) {
+            // Add at the end - get max position + 1
+            const maxPosition = sortedExercises.length > 0
+              ? Math.max(...sortedExercises.map((e) => e.position ?? 0))
+              : -1;
+            newPosition = maxPosition + 1;
+          } else {
+            // Insert at specific position - shift others up
+            newPosition = position;
+          }
+          
+          const exerciseWithPosition: Exercise = {
+            ...exercise,
+            position: newPosition,
+          };
+          
+          // Insert exercise and re-sort
+          const newExercises = [...sortedExercises, exerciseWithPosition];
+          return { ...workout, exercises: newExercises };
+        })
       );
     },
     [setCustomWorkouts]
@@ -70,11 +136,12 @@ export function useWorkoutState() {
   const deleteExercise = useCallback(
     (workoutId: WorkoutDay, exerciseId: string) => {
       setCustomWorkouts((prev) =>
-        prev.map((workout) =>
-          workout.id === workoutId
-            ? { ...workout, exercises: workout.exercises.filter((e) => e.id !== exerciseId) }
-            : workout
-        )
+        prev.map((workout) => {
+          if (workout.id !== workoutId) return workout;
+          
+          const filteredExercises = workout.exercises.filter((e) => e.id !== exerciseId);
+          return { ...workout, exercises: filteredExercises };
+        })
       );
       // Also remove the weight entry
       setUserWeights((prev) => {
@@ -84,6 +151,41 @@ export function useWorkoutState() {
       });
     },
     [setCustomWorkouts, setUserWeights]
+  );
+
+  // Reorder exercises within a workout
+  const reorderExercises = useCallback(
+    (workoutId: WorkoutDay, fromIndex: number, toIndex: number) => {
+      setCustomWorkouts((prev) =>
+        prev.map((workout) => {
+          if (workout.id !== workoutId) return workout;
+          
+          // Sort by position first to get correct order
+          const sortedExercises = sortExercisesByPosition(workout.exercises);
+          
+          // Get the exercise being moved
+          const [movedExercise] = sortedExercises.splice(fromIndex, 1);
+          
+          // Insert at new position
+          if (fromIndex < toIndex) {
+            // Moving down - insert before the item that was at toIndex
+            sortedExercises.splice(toIndex - 1, 0, movedExercise);
+          } else {
+            // Moving up - insert before the item that will be at toIndex
+            sortedExercises.splice(toIndex, 0, movedExercise);
+          }
+          
+          // Update positions to match new order
+          const reindexedExercises = sortedExercises.map((exercise, index) => ({
+            ...exercise,
+            position: index,
+          }));
+          
+          return { ...workout, exercises: reindexedExercises };
+        })
+      );
+    },
+    [setCustomWorkouts]
   );
 
   // Reset all data
@@ -112,6 +214,7 @@ export function useWorkoutState() {
     workouts: customWorkouts,
     addExercise,
     deleteExercise,
+    reorderExercises,
     weekSelectorVisible,
     setWeekSelectorVisible,
     restDuration,

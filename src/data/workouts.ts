@@ -45,6 +45,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Chest',
         notes: 'Incline angle for upper chest emphasis',
+        position: 0,
       },
       {
         id: 'shoulder-press-db',
@@ -54,6 +55,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Shoulders',
         notes: '10kg per hand',
+        position: 1,
       },
       {
         id: 'chest-press-close',
@@ -63,6 +65,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Triceps',
         notes: 'Neutral grip for triceps emphasis',
+        position: 2,
       },
       {
         id: 'pushdown-bar',
@@ -71,6 +74,7 @@ export const workouts: WorkoutSession[] = [
         reps: '12',
         baseWeight: 0,
         muscleGroup: 'Triceps',
+        position: 3,
       },
       {
         id: 'dannunzio-crunch-push',
@@ -79,6 +83,7 @@ export const workouts: WorkoutSession[] = [
         reps: '10-12',
         baseWeight: 0,
         muscleGroup: 'Core',
+        position: 4,
       },
     ],
   },
@@ -95,6 +100,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Back',
         notes: 'Upper back thickness focus',
+        position: 0,
       },
       {
         id: 'low-pulley-row',
@@ -104,6 +110,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Back',
         notes: 'Mid-back and lats',
+        position: 1,
       },
       {
         id: 'incline-curl',
@@ -113,6 +120,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Biceps',
         notes: 'Emphasis on stretch',
+        position: 2,
       },
       {
         id: 'alternating-curl-pull',
@@ -121,6 +129,7 @@ export const workouts: WorkoutSession[] = [
         reps: '12',
         baseWeight: 0,
         muscleGroup: 'Biceps',
+        position: 3,
       },
       {
         id: 'cable-crunch',
@@ -129,6 +138,7 @@ export const workouts: WorkoutSession[] = [
         reps: '8-10',
         baseWeight: 0,
         muscleGroup: 'Core',
+        position: 4,
       },
     ],
   },
@@ -145,6 +155,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Legs',
         notes: 'Primary quad/glute compound',
+        position: 0,
       },
       {
         id: 'leg-extension',
@@ -153,6 +164,7 @@ export const workouts: WorkoutSession[] = [
         reps: '8-10',
         baseWeight: 0,
         muscleGroup: 'Quads',
+        position: 1,
       },
       {
         id: 'lying-leg-curl',
@@ -161,6 +173,7 @@ export const workouts: WorkoutSession[] = [
         reps: '8-10',
         baseWeight: 0,
         muscleGroup: 'Hamstrings',
+        position: 2,
       },
       {
         id: 'standing-calf',
@@ -169,6 +182,7 @@ export const workouts: WorkoutSession[] = [
         reps: '10',
         baseWeight: 0,
         muscleGroup: 'Calves',
+        position: 3,
       },
       {
         id: 'side-crunch',
@@ -178,6 +192,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Core',
         notes: 'Oblique work',
+        position: 4,
       },
     ],
   },
@@ -194,6 +209,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Chest',
         notes: 'Upper chest focus',
+        position: 0,
       },
       {
         id: 'lat-machine',
@@ -203,6 +219,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Back',
         notes: 'Lat width',
+        position: 1,
       },
       {
         id: 'alternating-curl-recall',
@@ -212,6 +229,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Biceps',
         notes: '8 reps per side',
+        position: 2,
       },
       {
         id: 'pushdown-rope',
@@ -221,6 +239,7 @@ export const workouts: WorkoutSession[] = [
         baseWeight: 0,
         muscleGroup: 'Triceps',
         notes: 'Long head emphasis',
+        position: 3,
       },
       {
         id: 'dannunzio-crunch-recall',
@@ -229,6 +248,7 @@ export const workouts: WorkoutSession[] = [
         reps: '8',
         baseWeight: 0,
         muscleGroup: 'Core',
+        position: 4,
       },
     ],
   },

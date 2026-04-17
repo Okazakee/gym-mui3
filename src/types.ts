@@ -10,6 +10,7 @@ export interface Exercise {
   baseWeight: number; // Starting weight in kg
   muscleGroup: string;
   notes?: string;
+  position?: number; // For explicit ordering - lower position = higher in list (optional for backwards compatibility)
 }
 
 export interface WorkoutSession {

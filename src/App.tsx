@@ -25,6 +25,7 @@ function App() {
     workouts,
     addExercise,
     deleteExercise,
+    reorderExercises,
     weekSelectorVisible,
     setWeekSelectorVisible,
     restDuration,
@@ -41,8 +42,8 @@ function App() {
     [workouts, currentDay]
   );
 
-  const handleAddExercise = (exercise: Exercise) => {
-    addExercise(currentDay, exercise);
+  const handleAddExercise = (exercise: Exercise, position: number) => {
+    addExercise(currentDay, exercise, position);
   };
 
   const handleDeleteExercise = (workoutId: string, exerciseId: string) => {
@@ -64,6 +65,11 @@ function App() {
           darkMode={darkMode}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
           onResetData={resetAll}
+          workouts={workouts}
+          userWeights={userWeights}
+          currentWeek={currentWeek}
+          restDuration={restDuration}
+          weekSelectorVisible={weekSelectorVisible}
         />
 
         <Container
@@ -89,6 +95,7 @@ function App() {
             onWeightChange={updateWeight}
             onDeleteExercise={handleDeleteExercise}
             onAddExercise={() => setAddDialogOpen(true)}
+            onReorderExercises={reorderExercises}
           />
         </Container>
 
