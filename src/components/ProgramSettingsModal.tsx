@@ -27,7 +27,7 @@ import {
   Star as StarIcon,
   Settings as GearIcon,
 } from '@mui/icons-material';
-import type { WeekConfig, DayConfig } from '../types';
+import type { WeekConfig, DayConfig, WorkoutSession } from '../types';
 
 interface ProgramSettingsModalProps {
   open: boolean;
@@ -36,6 +36,7 @@ interface ProgramSettingsModalProps {
   onWeekConfigsChange: (configs: WeekConfig[]) => void;
   dayConfigs: DayConfig[];
   onDayConfigsChange: (configs: DayConfig[]) => void;
+  onAddDayWithWorkout?: (day: DayConfig, workout: WorkoutSession) => void;
 }
 
 const ICON_OPTIONS = [
@@ -56,6 +57,7 @@ export function ProgramSettingsModal({
   onWeekConfigsChange,
   dayConfigs,
   onDayConfigsChange,
+  onAddDayWithWorkout,
 }: ProgramSettingsModalProps) {
   const theme = useTheme();
   const [tab, setTab] = useState(0);
@@ -83,7 +85,13 @@ export function ProgramSettingsModal({
 
   const handleAddDay = () => {
     const newId = `day-${Date.now()}`;
-    setLocalDays(prev => [...prev, { id: newId, name: `Day ${prev.length + 1}`, icon: 'FitnessCenter' }]);
+    const newDay: DayConfig = { id: newId, name: `Day ${localDays.length + 1}`, icon: 'FitnessCenter' };
+    const newWorkout: WorkoutSession = { id: newId, name: `Day ${localDays.length + 1}`, description: '', exercises: [] };
+    
+    setLocalDays(prev => [...prev, newDay]);
+    if (onAddDayWithWorkout) {
+      onAddDayWithWorkout(newDay, newWorkout);
+    }
   };
 
   const confirmDelete = () => {

@@ -16,10 +16,12 @@ interface BackupData {
   data: {
     workouts: WorkoutSession[];
     userWeights: UserWeights;
+    weekConfigs?: unknown[];
+    dayConfigs?: unknown[];
     settings: {
       currentWeek: WeekPhase;
+      currentDay?: string;
       restDuration: number;
-      weekSelectorVisible: boolean;
       darkMode: boolean;
     };
   };

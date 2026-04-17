@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -33,30 +33,47 @@ const muscleGroups = [
   'Full Body',
 ];
 
+const defaultValues = {
+  name: '',
+  muscleGroup: 'Chest',
+  sets: '2',
+  reps: '10',
+  notes: '',
+};
+
 export function AddExerciseDialog({ open, onClose, onAdd, exerciseToEdit, onEdit }: AddExerciseDialogProps) {
   const isEditing = !!exerciseToEdit;
 
-  const initialValues = isEditing && exerciseToEdit
-    ? {
-        name: exerciseToEdit.name,
-        muscleGroup: exerciseToEdit.muscleGroup,
-        sets: exerciseToEdit.sets.toString(),
-        reps: exerciseToEdit.reps,
-        notes: exerciseToEdit.notes || '',
-      }
-    : {
-        name: '',
-        muscleGroup: 'Chest',
-        sets: '2',
-        reps: '10',
-        notes: '',
-      };
+  const [name, setName] = useState(defaultValues.name);
+  const [muscleGroup, setMuscleGroup] = useState(defaultValues.muscleGroup);
+  const [sets, setSets] = useState(defaultValues.sets);
+  const [reps, setReps] = useState(defaultValues.reps);
+  const [notes, setNotes] = useState(defaultValues.notes);
 
-  const [name, setName] = useState(initialValues.name);
-  const [muscleGroup, setMuscleGroup] = useState(initialValues.muscleGroup);
-  const [sets, setSets] = useState(initialValues.sets);
-  const [reps, setReps] = useState(initialValues.reps);
-  const [notes, setNotes] = useState(initialValues.notes);
+  // Sync form state when exerciseToEdit changes or dialog opens
+  useEffect(() => {
+    if (open) {
+       
+      if (isEditing && exerciseToEdit) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setName(exerciseToEdit.name);
+         
+        setMuscleGroup(exerciseToEdit.muscleGroup);
+         
+        setSets(exerciseToEdit.sets.toString());
+         
+        setReps(exerciseToEdit.reps);
+         
+        setNotes(exerciseToEdit.notes || '');
+      } else {
+        setName(defaultValues.name);
+        setMuscleGroup(defaultValues.muscleGroup);
+        setSets(defaultValues.sets);
+        setReps(defaultValues.reps);
+        setNotes(defaultValues.notes);
+      }
+    }
+  }, [open, isEditing, exerciseToEdit]);
 
   const handleSubmit = () => {
     if (!name.trim()) return;

@@ -1,6 +1,14 @@
-import type { WorkoutSession, WeekInfo } from '../types';
+import type { WorkoutSession } from '../types';
 
-export const weekInfo: WeekInfo[] = [
+interface LegacyWeekInfo {
+  week: number;
+  name: string;
+  description: string;
+  loadModifier: number;
+  rir: number;
+}
+
+export const weekInfo: LegacyWeekInfo[] = [
   {
     week: 1,
     name: 'Tolerance',
@@ -253,12 +261,4 @@ export const workouts: WorkoutSession[] = [
     ],
   },
 ];
-
-export const getWorkout = (day: string): WorkoutSession | undefined => {
-  return workouts.find((w) => w.id === day);
-};
-
-export const getWeekInfo = (week: number): WeekInfo => {
-  return weekInfo.find((w) => w.week === week) || weekInfo[0];
-};
 

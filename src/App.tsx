@@ -27,11 +27,11 @@ function App() {
     resetAll,
     importData,
     workouts,
+    addWorkout,
     addExercise,
     editExercise,
     deleteExercise,
     reorderExercises,
-    weekSelectorVisible,
     restDuration,
     setRestDuration,
     weekConfigs,
@@ -77,11 +77,10 @@ function App() {
         currentWeek,
         currentDay,
         restDuration,
-        weekSelectorVisible,
         darkMode,
       },
     },
-  }), [workouts, userWeights, currentWeek, currentDay, restDuration, weekSelectorVisible, darkMode, weekConfigs, dayConfigs]);
+  }), [workouts, userWeights, currentWeek, currentDay, restDuration, darkMode, weekConfigs, dayConfigs]);
 
   useEffect(() => {
     if (cloudConnected) {
@@ -127,7 +126,6 @@ function App() {
           weekConfigs={weekConfigs}
           dayConfigs={dayConfigs}
           restDuration={restDuration}
-          weekSelectorVisible={weekSelectorVisible}
           cloudConnected={cloudConnected}
           cloudLastSync={cloudLastSync}
           onCloudConnect={handleCloudConnect}
@@ -152,6 +150,7 @@ function App() {
               onWeekConfigsChange={setWeekConfigs}
               dayConfigs={dayConfigs}
               onDayConfigsChange={setDayConfigs}
+              onAddDayWithWorkout={(_day, workout) => addWorkout(workout)}
               userWeights={userWeights}
               getAdjustedWeight={getAdjustedWeight}
               onWeightChange={updateWeight}

@@ -20,8 +20,8 @@ interface BackupData {
     userWeights: Record<string, number>;
     settings: {
       currentWeek: number;
+      currentDay?: string;
       restDuration: number;
-      weekSelectorVisible: boolean;
       darkMode: boolean;
     };
   };

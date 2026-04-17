@@ -72,10 +72,6 @@ export function useWorkoutState() {
     STORAGE_KEYS.CUSTOM_WORKOUTS, 
     defaultWorkouts
   );
-  const [weekSelectorVisible, setWeekSelectorVisible] = useLocalStorage<boolean>(
-    STORAGE_KEYS.WEEK_VISIBLE,
-    true
-  );
   const [restDuration, setRestDuration] = useLocalStorage<number>(
     STORAGE_KEYS.REST_DURATION,
     DEFAULT_REST_DURATION
@@ -236,17 +232,24 @@ export function useWorkoutState() {
     [setCustomWorkouts]
   );
 
+  // Add a new workout (when adding a new day)
+  const addWorkout = useCallback(
+    (workout: WorkoutSession) => {
+      setCustomWorkouts((prev) => [...prev, workout]);
+    },
+    [setCustomWorkouts]
+  );
+
   // Reset all data
   const resetAll = useCallback(() => {
     setCurrentWeek(1);
     setUserWeights({});
     setCustomWorkouts(defaultWorkouts);
-    setWeekSelectorVisible(true);
-  }, [setCurrentWeek, setUserWeights, setCustomWorkouts, setWeekSelectorVisible]);
+  }, [setCurrentWeek, setUserWeights, setCustomWorkouts]);
 
   // Import backup data
   const importData = useCallback(
-    (backup: { version: number; data: { workouts?: WorkoutSession[]; userWeights?: UserWeights; weekConfigs?: WeekConfig[]; dayConfigs?: DayConfig[]; settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; weekSelectorVisible: boolean; darkMode: boolean } } }) => {
+    (backup: { version: number; data: { workouts?: WorkoutSession[]; userWeights?: UserWeights; weekConfigs?: WeekConfig[]; dayConfigs?: DayConfig[]; settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; darkMode: boolean } } }) => {
       if (backup.data.userWeights) {
         setUserWeights(backup.data.userWeights);
       }
@@ -260,15 +263,14 @@ export function useWorkoutState() {
         setDayConfigs(backup.data.dayConfigs);
       }
       if (backup.data.settings) {
-        const { currentWeek: week, currentDay: day, restDuration: rest, weekSelectorVisible: visible, darkMode: dark } = backup.data.settings;
+        const { currentWeek: week, currentDay: day, restDuration: rest, darkMode: dark } = backup.data.settings;
         if (week) setCurrentWeek(week);
         if (day) setCurrentDay(day);
         if (rest) setRestDuration(rest);
-        if (visible !== undefined) setWeekSelectorVisible(visible);
         if (dark !== undefined) setDarkMode(dark);
       }
     },
-    [setUserWeights, setCustomWorkouts, setCurrentWeek, setCurrentDay, setRestDuration, setWeekSelectorVisible, setDarkMode, setWeekConfigs, setDayConfigs]
+    [setUserWeights, setCustomWorkouts, setCurrentWeek, setCurrentDay, setRestDuration, setDarkMode, setWeekConfigs, setDayConfigs]
   );
 
   // Advance to next week
@@ -295,12 +297,11 @@ export function useWorkoutState() {
     importData,
     nextWeek,
     workouts: customWorkouts,
+    addWorkout,
     addExercise,
     editExercise,
     deleteExercise,
     reorderExercises,
-    weekSelectorVisible,
-    setWeekSelectorVisible,
     restDuration,
     setRestDuration,
     weekConfigs,

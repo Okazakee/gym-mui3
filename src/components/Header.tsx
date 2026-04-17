@@ -34,7 +34,7 @@ interface HeaderProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onResetData: () => void;
-  onImportData: (backup: { version: number; data: { workouts: WorkoutSession[]; userWeights: UserWeights; weekConfigs?: WeekConfig[]; dayConfigs?: DayConfig[]; settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; weekSelectorVisible: boolean; darkMode: boolean } } }) => void;
+  onImportData: (backup: { version: number; data: { workouts: WorkoutSession[]; userWeights: UserWeights; weekConfigs?: WeekConfig[]; dayConfigs?: DayConfig[]; settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; darkMode: boolean } } }) => void;
   workouts: WorkoutSession[];
   userWeights: UserWeights;
   currentWeek: WeekPhase;
@@ -42,7 +42,6 @@ interface HeaderProps {
   weekConfigs: WeekConfig[];
   dayConfigs: DayConfig[];
   restDuration: number;
-  weekSelectorVisible: boolean;
   cloudConnected: boolean;
   cloudLastSync: string | null;
   onCloudConnect: (token: string) => Promise<boolean>;
@@ -63,7 +62,6 @@ export function Header({
   weekConfigs,
   dayConfigs,
   restDuration,
-  weekSelectorVisible,
   cloudConnected,
   cloudLastSync,
   onCloudConnect,
@@ -77,7 +75,7 @@ export function Header({
   const [cloudModalOpen, setCloudModalOpen] = useState(false);
   const [localBackupModalOpen, setLocalBackupModalOpen] = useState(false);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
-  const [pendingImport, setPendingImport] = useState<{ version: number; exportedAt: string; data: { workouts: WorkoutSession[]; userWeights: UserWeights; settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; weekSelectorVisible: boolean; darkMode: boolean }; weekConfigs?: WeekConfig[]; dayConfigs?: DayConfig[] } } | null>(null);
+  const [pendingImport, setPendingImport] = useState<{ version: number; exportedAt: string; data: { workouts: WorkoutSession[]; userWeights: UserWeights; settings: { currentWeek: WeekPhase; currentDay?: WorkoutDay; restDuration: number; darkMode: boolean }; weekConfigs?: WeekConfig[]; dayConfigs?: DayConfig[] } } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleReset = () => {
@@ -98,7 +96,6 @@ export function Header({
           currentWeek,
           currentDay,
           restDuration,
-          weekSelectorVisible,
           darkMode,
         },
       },
@@ -168,7 +165,6 @@ export function Header({
         currentWeek,
         currentDay,
         restDuration,
-        weekSelectorVisible,
         darkMode,
       },
     },

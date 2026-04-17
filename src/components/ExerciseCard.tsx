@@ -228,13 +228,6 @@ export function ExerciseCard({
               >
                 kg
               </Typography>
-              <EditIcon
-                sx={{
-                  fontSize: 18,
-                  color: theme.palette.text.disabled,
-                  ml: 0.5,
-                }}
-              />
             </Box>
           )}
 

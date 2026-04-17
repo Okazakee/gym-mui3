@@ -23,6 +23,7 @@ interface WorkoutViewProps {
   onWeekConfigsChange: (configs: WeekConfig[]) => void;
   dayConfigs: DayConfig[];
   onDayConfigsChange: (configs: DayConfig[]) => void;
+  onAddDayWithWorkout?: (day: DayConfig, workout: WorkoutSession) => void;
   userWeights: Record<string, number>;
   getAdjustedWeight: (exerciseId: string) => number;
   onWeightChange: (exerciseId: string, newWeight: number) => void;
@@ -42,6 +43,7 @@ export function WorkoutView({
   onWeekConfigsChange,
   dayConfigs,
   onDayConfigsChange,
+  onAddDayWithWorkout,
   userWeights,
   getAdjustedWeight,
   onWeightChange,
@@ -216,6 +218,7 @@ export function WorkoutView({
         onWeekConfigsChange={onWeekConfigsChange}
         dayConfigs={dayConfigs}
         onDayConfigsChange={onDayConfigsChange}
+        onAddDayWithWorkout={onAddDayWithWorkout}
       />
 
       <AddExerciseDialog
