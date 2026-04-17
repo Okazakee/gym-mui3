@@ -1,9 +1,10 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { ThemeProvider, CssBaseline, Box, Container } from '@mui/material';
 
 import { lightTheme, darkTheme } from './theme';
 import { useWorkoutState } from './hooks/useWorkoutState';
 import { useCloudSync } from './hooks/useCloudSync';
+import type { BackupData } from './hooks/useCloudSync';
 import type { WorkoutDay, Exercise, WorkoutSession, UserWeights, WeekPhase, WeekConfig, DayConfig } from './types';
 
 import { Header } from './components/Header';
@@ -12,6 +13,7 @@ import { Navigation } from './components/Navigation';
 import { AddExerciseDialog } from './components/AddExerciseDialog';
 import { RestTimer } from './components/RestTimer';
 import { SyncErrorModal } from './components/SyncErrorModal';
+import { ImportPreviewModal } from './components/ImportPreviewModal';
 
 function App() {
   const [cloudImportData, setCloudImportData] = useState<{
@@ -65,7 +67,41 @@ const {
     hasPendingSync,
     connect,
     confirmConnect,
+    checkForCloudUpdates,
+    invalidateSyncHash,
   } = useCloudSync();
+
+  const [cloudPullData, setCloudPullData] = useState<BackupData | null>(null);
+
+  const checkForCloudUpdatesRef = useRef(checkForCloudUpdates);
+  useEffect(() => { checkForCloudUpdatesRef.current = checkForCloudUpdates; });
+
+  useEffect(() => {
+    if (!cloudConnected) return;
+
+    const doCheck = () => {
+      if (document.visibilityState !== 'visible') return;
+      checkForCloudUpdatesRef.current().then(data => {
+        if (data) setCloudPullData(data);
+      });
+    };
+
+    doCheck();
+    document.addEventListener('visibilitychange', doCheck);
+    return () => document.removeEventListener('visibilitychange', doCheck);
+  }, [cloudConnected]);
+
+  const handleCloudPullConfirm = () => {
+    if (cloudPullData) {
+      importData(cloudPullData);
+      setCloudPullData(null);
+    }
+  };
+
+  const handleCloudPullClose = () => {
+    invalidateSyncHash();
+    setCloudPullData(null);
+  };
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
@@ -112,10 +148,10 @@ const {
   };
 
   useEffect(() => {
-    if (cloudConnected) {
+    if (cloudConnected && !cloudPullData) {
       cloudSync(backupData);
     }
-  }, [backupData, cloudConnected, cloudSync]);
+  }, [backupData, cloudConnected, cloudSync, cloudPullData]);
 
   const theme = useMemo(() => (darkMode ? darkTheme : lightTheme), [darkMode]);
 
@@ -218,6 +254,17 @@ const {
           onClose={() => setAddDialogOpen(false)}
           onAdd={handleAddExercise}
         />
+
+        {cloudPullData && (
+          <ImportPreviewModal
+            open={!!cloudPullData}
+            onClose={handleCloudPullClose}
+            onConfirm={handleCloudPullConfirm}
+            currentData={backupData}
+            importedData={cloudPullData}
+            title="Cloud Update Available"
+          />
+        )}
       </Box>
     </ThemeProvider>
   );

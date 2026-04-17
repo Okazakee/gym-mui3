@@ -10,7 +10,7 @@ const STORAGE_KEYS = {
   SYNC_FAILED: 'gym-tracker-sync-failed',
 };
 
-interface BackupData {
+export interface BackupData {
   version: number;
   exportedAt: string;
   data: {
@@ -42,6 +42,7 @@ export function useCloudSync() {
   const [syncQueue, setSyncQueue] = useLocalStorage<QueuedSync[]>(STORAGE_KEYS.SYNC_QUEUE, []);
   const debounceTimerRef = useRef<number | null>(null);
   const lastPushedHashRef = useRef<string | null>(null);
+  const lastCloudCheckRef = useRef<number>(0);
 
   const isConnected = !!githubToken;
 
@@ -280,6 +281,25 @@ export function useCloudSync() {
     }
   }, [fetchCloudBackup]);
 
+  const checkForCloudUpdates = useCallback(async (): Promise<BackupData | null> => {
+    if (!githubToken || !gistId || !navigator.onLine) return null;
+    const now = Date.now();
+    if (now - lastCloudCheckRef.current < 60_000) return null;
+    lastCloudCheckRef.current = now;
+    try {
+      const cloudData = await fetchCloudBackup(githubToken, gistId);
+      if (!cloudData) return null;
+      if (!lastSync || cloudData.exportedAt <= lastSync) return null;
+      return cloudData;
+    } catch {
+      return null;
+    }
+  }, [githubToken, gistId, fetchCloudBackup, lastSync]);
+
+  const invalidateSyncHash = useCallback(() => {
+    lastPushedHashRef.current = null;
+  }, []);
+
   const confirmConnect = useCallback((token: string, resolvedGistId: string) => {
     setGithubToken(token);
     setGistId(resolvedGistId);
@@ -328,5 +348,7 @@ export function useCloudSync() {
     hasPendingSync: syncQueue.length > 0,
     connect,
     confirmConnect,
+    checkForCloudUpdates,
+    invalidateSyncHash,
   };
 }

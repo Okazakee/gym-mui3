@@ -33,6 +33,7 @@ interface ImportPreviewModalProps {
   onConfirm: () => void;
   currentData: BackupData | null;
   importedData: BackupData;
+  title?: string;
 }
 
 interface ChangeSummary {
@@ -116,6 +117,7 @@ export function ImportPreviewModal({
   onConfirm,
   currentData,
   importedData,
+  title = 'Import Preview',
 }: ImportPreviewModalProps) {
   const theme = useTheme();
 
@@ -134,7 +136,7 @@ export function ImportPreviewModal({
       }}
     >
       <DialogTitle sx={{ fontWeight: 600 }}>
-        Import Preview
+        {title}
       </DialogTitle>
 
       <DialogContent sx={{ overflow: 'auto' }}>
