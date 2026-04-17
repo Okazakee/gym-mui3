@@ -167,13 +167,7 @@ export function useWorkoutState() {
           const [movedExercise] = sortedExercises.splice(fromIndex, 1);
           
           // Insert at new position
-          if (fromIndex < toIndex) {
-            // Moving down - insert before the item that was at toIndex
-            sortedExercises.splice(toIndex - 1, 0, movedExercise);
-          } else {
-            // Moving up - insert before the item that will be at toIndex
-            sortedExercises.splice(toIndex, 0, movedExercise);
-          }
+          sortedExercises.splice(toIndex, 0, movedExercise);
           
           // Update positions to match new order
           const reindexedExercises = sortedExercises.map((exercise, index) => ({
@@ -196,6 +190,26 @@ export function useWorkoutState() {
     setWeekSelectorVisible(true);
   }, [setCurrentWeek, setUserWeights, setCustomWorkouts, setWeekSelectorVisible]);
 
+  // Import backup data
+  const importData = useCallback(
+    (backup: { version: number; data: { workouts: WorkoutSession[]; userWeights: UserWeights; settings: { currentWeek: WeekPhase; restDuration: number; weekSelectorVisible: boolean; darkMode: boolean } } }) => {
+      if (backup.data.userWeights) {
+        setUserWeights(backup.data.userWeights);
+      }
+      if (backup.data.workouts) {
+        setCustomWorkouts(backup.data.workouts);
+      }
+      if (backup.data.settings) {
+        const { currentWeek: week, restDuration: rest, weekSelectorVisible: visible, darkMode: dark } = backup.data.settings;
+        if (week) setCurrentWeek(week);
+        if (rest) setRestDuration(rest);
+        if (visible !== undefined) setWeekSelectorVisible(visible);
+        if (dark !== undefined) setDarkMode(dark);
+      }
+    },
+    [setUserWeights, setCustomWorkouts, setCurrentWeek, setRestDuration, setWeekSelectorVisible, setDarkMode]
+  );
+
   // Advance to next week
   const nextWeek = useCallback(() => {
     setCurrentWeek((prev) => ((prev % 4) + 1) as WeekPhase);
@@ -210,6 +224,7 @@ export function useWorkoutState() {
     darkMode,
     setDarkMode,
     resetAll,
+    importData,
     nextWeek,
     workouts: customWorkouts,
     addExercise,

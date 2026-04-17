@@ -9,7 +9,6 @@ import {
   Collapse,
   Slider,
   Paper,
-  Tooltip,
 } from '@mui/material';
 import {
   Timer as TimerIcon,
@@ -19,17 +18,15 @@ import {
   Close as CloseIcon,
   Add as AddIcon,
   Remove as RemoveIcon,
-  Lock as LockIcon,
-  LockOpen as LockOpenIcon,
 } from '@mui/icons-material';
-import { useWakeLock } from '../hooks/useWakeLock';
 
 interface RestTimerProps {
-  defaultDuration: number; // in seconds
+  defaultDuration: number;
   onDurationChange: (duration: number) => void;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
-export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps) {
+export function RestTimer({ defaultDuration, onDurationChange, onOpenChange }: RestTimerProps) {
   const theme = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -38,11 +35,13 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
   const [showSettings, setShowSettings] = useState(false);
   const intervalRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { isSupported: wakeLockSupported, isActive: wakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock();
 
-  // Initialize audio for timer end
+  const handleSetOpen = (open: boolean) => {
+    setIsOpen(open);
+    onOpenChange?.(open);
+  };
+
   useEffect(() => {
-    // Create a simple beep using Web Audio API
     audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleW1mcYaGflxTYYqhtax6USpFjMvl3LKBXlxjdIGCd2RjcIqgtLSMakVFhLbZ48CghXlxcnl2alZcc46fr6+TdE9Hi7XI0sGnmY+IhYN8bmBeZ3+PlZ2ejnhdd5i60t3MubKsnp2bkYV0ZWVte4SNk5KKfm5rgZ2vvsrFu7KtrK6poZWIeXRzd36EioqGgHhxcIWcr7zBvba0s7W2saqfi4J9fX9/gYKBfnp3d4GUnKm2vL27ubq7u7mvn46Bf39/f39+fXt4dXiBkZyqtr3Avrq4t7W0rKCUiYOBgIB+fHp4dXN4hJOgrrm+v7y3s7CtqaWckoqFg4KBf316eHZ3fIqXo6+5vL26trKuqqahmZGLhoSCgX99e3l4eHyGk5+rsbi6uLWyr6yppZ6WjoiFg4GAfnt5eHl+h5OeqLK3t7azsK2qqKSfmJCKhoOBf358enl5fYaSmqWusbKxr62rqainop2Vj4qGg4F/fXt6en2FkJiks7e5t7SxrquopaGbk42IhYOAfn17e3x/iJObpK6ztLOwr6yqp6Sgm5SNiYWDgH5+fHt9gYqTm6OrsLGwra2rqaeinpqUjoqGg4GAf359fYGIkJeeo6iqqqmopaOhnpuXkY2JhoOBgH9+f4GGjJKYnqGjoqGgn52bmJWRjouIhoSCgYCAgoSIjZGWmZubnJuamJeVk5COi4mHhYSDg4OEhomMj5KUlZWVlJOSkI+NjIqJiIeGhoaGh4mKjI6PkJCQkI+Ojo2MjIuKioqJiYmJiouMjY6Ojo6OjY2NjYyMjIuLi4uLi4uLjIyMjY2NjY2NjY2NjY2NjYyMjIyMjIyMjIyMjIyMjI2NjY2NjY2NjY2NjY2NjY2NjYyM');
     return () => {
       if (intervalRef.current) {
@@ -51,14 +50,12 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
     };
   }, []);
 
-  // Timer logic
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
       intervalRef.current = window.setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             setIsRunning(false);
-            // Play sound and vibrate
             audioRef.current?.play().catch(() => {});
             if ('vibrate' in navigator) {
               navigator.vibrate([200, 100, 200, 100, 200]);
@@ -83,16 +80,8 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
     if (timeLeft === 0) {
       setTimeLeft(duration);
     }
-    setIsRunning((prev) => {
-      const newIsRunning = !prev;
-      if (newIsRunning) {
-        requestWakeLock();
-      } else {
-        releaseWakeLock();
-      }
-      return newIsRunning;
-    });
-  }, [timeLeft, duration, requestWakeLock, releaseWakeLock]);
+    setIsRunning((prev) => !prev);
+  }, [timeLeft, duration]);
 
   const resetTimer = useCallback(() => {
     setIsRunning(false);
@@ -126,11 +115,10 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
 
   return (
     <>
-      {/* Timer FAB - shows when closed */}
       {!isOpen && (
         <Fab
           size="medium"
-          onClick={() => setIsOpen(true)}
+          onClick={() => handleSetOpen(true)}
           sx={{
             position: 'fixed',
             bottom: 88,
@@ -150,7 +138,6 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
         </Fab>
       )}
 
-      {/* Expanded Timer Panel */}
       <Collapse in={isOpen}>
         <Paper
           elevation={8}
@@ -169,18 +156,16 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
             border: `1px solid ${theme.palette.divider}`,
           }}
         >
-          {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, ml: 2 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
               <TimerIcon sx={{ fontSize: 20 }} />
               Rest Timer
             </Typography>
-            <IconButton size="small" onClick={() => setIsOpen(false)}>
+            <IconButton size="small" onClick={() => handleSetOpen(false)}>
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>
 
-          {/* Timer Display */}
           <Box
             sx={{
               position: 'relative',
@@ -190,7 +175,6 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
               mb: 2,
             }}
           >
-            {/* Circular Progress Background */}
             <Box
               sx={{
                 position: 'relative',
@@ -238,7 +222,6 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
             </Box>
           </Box>
 
-          {/* Controls */}
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
             <IconButton
               onClick={resetTimer}
@@ -270,46 +253,23 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
             >
               {isRunning ? <PauseIcon sx={{ fontSize: 32 }} /> : <PlayIcon sx={{ fontSize: 32 }} />}
             </IconButton>
-            <Tooltip title={wakeLockActive ? 'Screen will stay on' : 'Allow screen to sleep'}>
-              <IconButton
-                onClick={() => wakeLockActive ? releaseWakeLock() : requestWakeLock()}
-                disabled={!wakeLockSupported}
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: '50%',
-                  backgroundColor: wakeLockActive 
-                    ? alpha(theme.palette.success.main, 0.2)
-                    : alpha(theme.palette.text.primary, 0.1),
-                  color: wakeLockActive ? theme.palette.success.main : theme.palette.text.primary,
-                  '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.3) },
-                }}
-              >
-                {wakeLockActive ? <LockIcon /> : <LockOpenIcon />}
-              </IconButton>
-            </Tooltip>
-          </Box>
-
-          {/* Secondary Controls */}
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             <IconButton
               onClick={() => setShowSettings(!showSettings)}
               sx={{
-                width: 40,
-                height: 40,
+                width: 48,
+                height: 48,
                 borderRadius: '50%',
                 backgroundColor: showSettings 
                   ? alpha(theme.palette.primary.main, 0.2)
-                  : alpha(theme.palette.text.primary, 0.05),
+                  : alpha(theme.palette.text.primary, 0.1),
                 color: showSettings ? theme.palette.primary.main : theme.palette.text.primary,
                 '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.2) },
               }}
             >
-              <TimerIcon fontSize="small" />
+              <TimerIcon />
             </IconButton>
           </Box>
 
-          {/* Duration Settings */}
           <Collapse in={showSettings}>
             <Box sx={{ pt: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
               <Typography variant="caption" sx={{ color: theme.palette.text.secondary, mb: 1, display: 'block' }}>
@@ -349,4 +309,3 @@ export function RestTimer({ defaultDuration, onDurationChange }: RestTimerProps)
     </>
   );
 }
-

@@ -13,6 +13,8 @@ import {
   useTheme,
   alpha,
   Tooltip,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   DarkMode as DarkModeIcon,
@@ -20,17 +22,19 @@ import {
   DeleteOutline as ResetIcon,
   FitnessCenterRounded as LogoIcon,
   Download as DownloadIcon,
+  Upload as UploadIcon,
 } from '@mui/icons-material';
-import { useState } from 'react';
-import type { WorkoutSession, UserWeights } from '../types';
+import { useState, useRef } from 'react';
+import type { WorkoutSession, UserWeights, WeekPhase } from '../types';
 
 interface HeaderProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onResetData: () => void;
+  onImportData: (backup: { version: number; data: { workouts: WorkoutSession[]; userWeights: UserWeights; settings: { currentWeek: WeekPhase; restDuration: number; weekSelectorVisible: boolean; darkMode: boolean } } }) => void;
   workouts: WorkoutSession[];
   userWeights: UserWeights;
-  currentWeek: number;
+  currentWeek: WeekPhase;
   restDuration: number;
   weekSelectorVisible: boolean;
 }
@@ -39,6 +43,7 @@ export function Header({
   darkMode, 
   onToggleDarkMode, 
   onResetData,
+  onImportData,
   workouts,
   userWeights,
   currentWeek,
@@ -47,10 +52,37 @@ export function Header({
 }: HeaderProps) {
   const theme = useTheme();
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleReset = () => {
     onResetData();
     setResetDialogOpen(false);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const backup = JSON.parse(e.target?.result as string);
+        if (!backup.version || !backup.data) {
+          throw new Error('Invalid backup file');
+        }
+        onImportData(backup);
+        setImportError(null);
+      } catch (err) {
+        setImportError('Invalid backup file');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
   };
 
   const handleExportBackup = () => {
@@ -129,6 +161,21 @@ export function Header({
                 <DownloadIcon />
               </IconButton>
             </Tooltip>
+            <Tooltip title="Import backup">
+              <IconButton
+                onClick={handleImportClick}
+                sx={{ color: theme.palette.text.primary }}
+              >
+                <UploadIcon />
+              </IconButton>
+            </Tooltip>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+            />
             <IconButton
               onClick={onToggleDarkMode}
               sx={{ color: theme.palette.text.primary }}
@@ -174,6 +221,17 @@ export function Header({
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={!!importError}
+        autoHideDuration={4000}
+        onClose={() => setImportError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={() => setImportError(null)}>
+          {importError}
+        </Alert>
+      </Snackbar>
     </>
   );
 }

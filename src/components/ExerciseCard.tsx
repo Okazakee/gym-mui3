@@ -8,16 +8,22 @@ import {
   Chip,
   alpha,
   useTheme,
-  Collapse,
   TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Remove as RemoveIcon,
   FitnessCenterRounded as WeightIcon,
-  ExpandMore as ExpandIcon,
   Edit as EditIcon,
   DeleteOutline as DeleteIcon,
+  KeyboardArrowUp as UpIcon,
+  KeyboardArrowDown as DownIcon,
 } from '@mui/icons-material';
 import type { Exercise } from '../types';
 
@@ -27,7 +33,10 @@ interface ExerciseCardProps {
   baseWeight: number;
   onWeightChange: (exerciseId: string, newWeight: number) => void;
   onDelete: () => void;
-  rir: number;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 export function ExerciseCard({
@@ -36,12 +45,15 @@ export function ExerciseCard({
   baseWeight,
   onWeightChange,
   onDelete,
-  rir,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = true,
+  canMoveDown = true,
 }: ExerciseCardProps) {
   const theme = useTheme();
-  const [expanded, setExpanded] = useState(false);
   const [editingWeight, setEditingWeight] = useState(false);
   const [tempWeight, setTempWeight] = useState(baseWeight.toString());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const handleWeightAdjust = (delta: number) => {
     const step = baseWeight >= 20 ? 2.5 : 1;
@@ -100,7 +112,6 @@ export function ExerciseCard({
                   color: theme.palette.primary.main,
                 }}
               />
-              {/* Set pills */}
               {Array.from({ length: exercise.sets }).map((_, i) => (
                 <Chip
                   key={i}
@@ -117,30 +128,7 @@ export function ExerciseCard({
                   }}
                 />
               ))}
-              <Chip
-                label={`RIR ${rir}`}
-                size="small"
-                sx={{
-                  fontSize: '0.8rem',
-                  height: 28,
-                  fontWeight: 500,
-                  backgroundColor: alpha(theme.palette.warning.main, 0.12),
-                  color: theme.palette.warning.dark,
-                }}
-              />
             </Box>
-          </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            <IconButton
-              size="small"
-              onClick={() => setExpanded(!expanded)}
-              sx={{
-                transform: expanded ? 'rotate(180deg)' : 'none',
-                transition: 'transform 0.3s',
-              }}
-            >
-              <ExpandIcon />
-            </IconButton>
           </Box>
         </Box>
 
@@ -243,40 +231,92 @@ export function ExerciseCard({
           </IconButton>
         </Box>
 
-        {/* Expandable Notes & Delete */}
-        <Collapse in={expanded}>
-          <Box
+        {exercise.notes && (
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, my: 1 }}>
+            💡 {exercise.notes}
+          </Typography>
+        )}
+
+        {/* Bottom Actions */}
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 2 }}>
+          <IconButton
+            size="small"
+            onClick={onMoveUp}
+            disabled={!canMoveUp}
             sx={{
-              mt: 2,
-              pt: 2,
-              borderTop: `1px solid ${theme.palette.divider}`,
+              flex: 1,
+              p: 1,
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              color: theme.palette.primary.main,
+              opacity: canMoveUp ? 1 : 0.3,
+              '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.2) },
             }}
           >
-            {exercise.notes && (
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 2 }}>
-                💡 {exercise.notes}
-              </Typography>
-            )}
-            <Typography
-              variant="caption"
-              sx={{ display: 'block', color: theme.palette.text.disabled, mb: 2 }}
-            >
-              Base weight: {baseWeight}kg • Adjusted: {adjustedWeight}kg
-            </Typography>
-            <IconButton
-              onClick={onDelete}
-              sx={{
-                color: theme.palette.error.main,
-                backgroundColor: alpha(theme.palette.error.main, 0.1),
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.error.main, 0.2),
-                },
+            <UpIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={onMoveDown}
+            disabled={!canMoveDown}
+            sx={{
+              flex: 1,
+              p: 1,
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              color: theme.palette.primary.main,
+              opacity: canMoveDown ? 1 : 0.3,
+              '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.2) },
+            }}
+          >
+            <DownIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => setDeleteDialogOpen(true)}
+            sx={{
+              flex: 1,
+              p: 1,
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.error.main, 0.1),
+              color: theme.palette.error.main,
+              '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.2) },
+            }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          PaperProps={{ sx: { borderRadius: 3 } }}
+        >
+          <DialogTitle sx={{ fontWeight: 600 }}>
+            Delete Exercise?
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to delete "{exercise.name}"? This cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)} color="inherit">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                onDelete();
+                setDeleteDialogOpen(false);
               }}
+              color="error"
+              variant="contained"
             >
-              <DeleteIcon />
-            </IconButton>
-          </Box>
-        </Collapse>
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </CardContent>
     </Card>
   );

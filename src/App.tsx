@@ -22,6 +22,7 @@ function App() {
     darkMode,
     setDarkMode,
     resetAll,
+    importData,
     workouts,
     addExercise,
     deleteExercise,
@@ -34,6 +35,7 @@ function App() {
 
   const [currentDay, setCurrentDay] = useState<WorkoutDay>('push');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [timerOpen, setTimerOpen] = useState(false);
 
   const theme = useMemo(() => (darkMode ? darkTheme : lightTheme), [darkMode]);
 
@@ -65,6 +67,7 @@ function App() {
           darkMode={darkMode}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
           onResetData={resetAll}
+          onImportData={importData}
           workouts={workouts}
           userWeights={userWeights}
           currentWeek={currentWeek}
@@ -96,6 +99,7 @@ function App() {
             onDeleteExercise={handleDeleteExercise}
             onAddExercise={() => setAddDialogOpen(true)}
             onReorderExercises={reorderExercises}
+            timerOpen={timerOpen}
           />
         </Container>
 
@@ -104,6 +108,7 @@ function App() {
         <RestTimer
           defaultDuration={restDuration}
           onDurationChange={setRestDuration}
+          onOpenChange={setTimerOpen}
         />
 
         <AddExerciseDialog
